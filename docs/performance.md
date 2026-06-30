@@ -552,3 +552,45 @@ If your next step is **Steering Behaviors** (as mentioned in your `movement.md`)
 # `for` over `foreach`
 
 For high performance requirements, like calculating movement or combat every frame, use `for` loops over `foreach` loops.
+
+
+# C++ DO NOT DELETE
+
+That is a very pragmatic approach. **Focusing optimization only on the "Hot Path" (the code that runs every frame or in your update loop) is the single most effective way to improve performance without over-engineering your code.**
+
+If you use `std::map` or `std::vector` during initialization (loading JSON, setting up registers), the performance cost is one-time and negligible. It is only when those collections are accessed 60+ times per second during your game loop that they become a problem.
+
+### The "Hot Path" Refactoring Strategy
+
+For the parts of your engine that execute every frame (like `EngineDriver::Tick` or your `FormulaProcessor`), focus on these three areas:
+
+#### 1. Avoid String Lookups in the Loop
+
+Currently, if your `FormulaProcessor` looks up operations by string names (like `"Strength"`, `"Add"`, `"Multiply"`) every frame, that is a massive amount of string comparing and hashing.
+
+* **The Refactor**: Pre-convert these strings to `enum` types or `int` constants during the loading phase. When the formula runs, it should compare `OperationType::Add` (an integer) rather than `"Add"` (a string).
+
+#### 2. Flatten Your Data Access
+
+If your `FormulaProcessor` is currently accessing `_formulas[formulaName]`, you are performing a map lookup every frame.
+
+* **The Refactor**: Cache a pointer or a direct index to the required formula inside your `Entity` or `EntityStats` object during initialization. In the update loop, perform a direct access: `_formulas[cachedIndex].Execute(...)`.
+
+#### 3. Minimize Pointer Chasing
+
+If your update loop iterates through a `std::vector<Entity*>`, the CPU has to jump to a different memory address for every single entity. This is a "pointer chase".
+
+* **The Refactor**: If possible, keep your active entities in a tightly packed array (like your `std::array` idea) so the CPU can prefetch the entire block of memory at once.
+
+### Summary: Where to Refactor vs. Where to Keep
+
+| Operation | Frequency | Action |
+| --- | --- | --- |
+| **JSON Loading** | Once | Keep `std::map`, `std::vector`, `std::string`. Keep it convenient. |
+| **Data Registration** | Once | Keep current setup. |
+| **Formula Execution** | Every Frame | **Refactor**: Use `enum` instead of strings; use array indexing instead of maps. |
+| **Stat Updates** | Every Frame | **Refactor**: Ensure your `EntityStats` are stored in a contiguous array. |
+
+By isolating your performance-critical logic from your convenient loading logic, you keep the code readable while ensuring the game runs smoothly at 8192 entities.
+
+Does your current `FormulaProcessor::Execute` loop perform any string comparisons, or is it already using some form of internal ID/Enum?

@@ -130,3 +130,50 @@ int main() {
 
 * To get a pointer to the start of a vector (to interface with C-style APIs): `int* ptr = vec.data();`
 * You cannot "convert" a `std::array` to a `std::vector` automatically; you must copy the elements into a new vector constructor: `std::vector<int> v(arr.begin(), arr.end());`
+
+## Performance
+
+Using fixed-size arrays instead of `std::vector` can indeed improve performance, but it comes with specific trade-offs regarding memory and safety.
+
+### The Performance Reality
+
+* **Contiguity**: `std::vector` *is* a flat array in memory. When you access `vector[i]`, you are accessing a contiguous memory block just like a standard array `array[i]`. The performance difference in memory access is negligible.
+* **Vector Overhead**: `std::vector` has a tiny overhead (three pointers: begin, end, capacity). It performs a heap allocation on creation. A static array allocates memory on the stack (or data segment) and has zero allocation overhead.
+* **The Benefit of Fixed Size**: Because your limits are known (`1024`), you can eliminate heap allocations entirely by using `std::array<T, MaxEntities>`. This improves **cache locality** and removes the risk of dynamic resizing (which causes "reallocations," the most expensive part of a `std::vector`).
+
+### Implementing Fixed-Size Arrays (The Data-Oriented Way)
+
+To match the high-performance architecture described in your documents (like SoA—Structure of Arrays), you would move away from a vector of objects to static arrays for your components.
+
+**Instead of:**
+
+```cpp
+std::vector<EntityStats> stats; // Potentially on the heap, reallocates
+
+```
+
+**Use:**
+
+```cpp
+#include <array>
+#include "Core/Constants.hpp"
+
+// This sits on the stack or in the data segment (fixed memory footprint)
+std::array<EntityStats, MaxEntities> stats; 
+
+```
+
+### Should you do it?
+
+| Aspect | `std::vector` | `std::array` (Fixed) |
+| --- | --- | --- |
+| **Speed** | Very Fast | Faster (No heap allocation) |
+| **Safety** | Prevents overflow (dynamic) | Fixed (Must manually check bounds) |
+| **Memory** | Dynamic (Grows as needed) | Static (Always consumes full size) |
+| **Usage** | Easiest to use | Best for performance-critical ECS loops |
+
+### Recommendation
+
+Since you have a predefined `MaxEntities = 1024`, using `std::array` is a excellent way to tighten your architecture. However, you must implement a "handle" system or an "active count" variable to keep track of how many of those 1024 slots are actually being used, otherwise, your loops will iterate over 1024 items even if only 2 NPCs exist.
+
+Would you like to see how to implement a simple "Active List" or "Sparse Set" to track which of those 1024 array slots are currently in use?
