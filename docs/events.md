@@ -1,20 +1,20 @@
-# Data-Oriented Event Handling in ECS
+# Data-Oriented Event Handling in ECS (C++ Version)
 
 To understand how events fit into a high-performance Entity Component System (ECS), we must abandon traditional Object-Oriented Programming (OOP) patterns.
 
-In traditional games, events are driven by a **Push Model** using direct callback links like C# delegates or Godot Signals (e.g., `onDeath`, `onTakeDamage`). Attaching managed delegate pointers or method references directly inside ECS components breaks your memory layout, causes massive garbage collection spikes, and creates tight engine coupling.
+In traditional games, events are driven by a **Push Model** using direct callback links like C++ `std::function` or observer patterns (e.g., `onDeath`, `onTakeDamage`). Attaching managed pointer objects or virtual method references directly inside ECS components breaks your memory layout, causes massive heap fragmentation, and creates tight engine coupling.
 
 A mature, decoupled engine splits event handling into **three distinct, highly optimized pipelines**, each tailored to a specific class of data lifecycle problem:
 
 1. **`IsDirty` Flags (State Persistence):** Polling flags embedded in long-lived component arrays.
-2. **Reactive Event Buffers (Transient Spark):** Flat queues for frame-bound, one-shot feedback.
+2. **Reactive Event Buffers (Transient Spark):** Flat vectors for frame-bound, one-shot feedback.
 3. **Central Delegate Registries (System Routing):** Lookup tables to route data configurations to compiled code logic.
 
 ## 1. The `IsDirty` Bitmask (For Persistent State Persistence)
 
 * **The Concept:** A simple primitive boolean or bit flag embedded directly inside your long-lived, continuous component structures.
 * **Best Used For:** Persistent variables that live indefinitely in memory but change unpredictably (e.g., player health bars, unit world positions, minimap markers).
-* **The Workflow:** The Controller mutates the data and flips the flag to `true`. At the end of the frame, the View sweeps the memory bank, processes *only* the data elements marked true, updates its on-screen nodes (like Godot Labels), and flushes the flag back to `false`.
+* **The Workflow:** The Controller mutates the data and flips the flag to `true`. At the end of the frame, the View sweeps the memory bank, processes *only* the data elements marked true, updates its on-screen nodes, and flushes the flag back to `false`.
 
 ```mermaid
 graph LR
@@ -24,25 +24,28 @@ graph LR
 
 ```
 
-#### C# Implementation
+#### C++ Implementation
 
-```csharp
-namespace Game.Model
+```cpp
+namespace Game::Model
 {
-    // High-performance value type sitting contiguously in an array slot
-    public struct HealthComponent
+    // High-performance POD (Plain Old Data) struct sitting contiguously in a memory block
+    struct HealthComponent
     {
-        public int EntityId;
-        public int CurrentHp;
-        public bool IsDirty; // The gatekeeper tracking flag
-    }
+        int EntityId;
+        int CurrentHp;
+        bool IsDirty; // The gatekeeper tracking flag
+    };
 
-    public class HealthRegistry
+    class HealthRegistry
     {
-        private readonly HealthComponent[] _pool = new HealthComponent[1024];
-        public ref HealthComponent GetModifiable(int id) => ref _pool[id];
-        public Span<HealthComponent> GetSpan() => _pool.AsSpan();
-    }
+    private:
+        HealthComponent _pool[1024];
+    public:
+        HealthComponent& GetModifiable(int id) { return _pool[id]; }
+        HealthComponent* GetPool() { return _pool; }
+        size_t GetPoolSize() { return 1024; }
+    };
 }
 
 ```
@@ -51,113 +54,96 @@ namespace Game.Model
 
 * **The Concept:** Instead of an active callback trigger, we push a temporary `struct` into a global array buffer. This is known as a **Frame Backlog**.
 * **Best Used For:** Instantaneous, one-shot transactions that happen on a specific frame and leave behind no permanent data state (e.g., triggering a screen shake, spawning blood particles, or playing a slashing audio cue).
-* **The Workflow:** Logic systems drop raw event records into a flat list throughout the frame. The View (Godot) iterates through this queue sequentially to trigger graphic effects, and then the controller wipes the list clear via `.Clear()`, dropping memory overhead to zero with no GC allocations.
+* **The Workflow:** Logic systems drop raw event records into a flat `std::vector` throughout the frame. The View iterates through this queue sequentially to trigger graphic effects, and then the controller wipes the list clear via `.clear()`, dropping memory overhead to zero with no dynamic allocation overhead.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Logic as Combat System
-    participant Buffer as Reactive Event Buffer List
-    participant View as Godot View Renderer
+#### C++ Implementation
 
-    Logic->>Buffer: Add(new VisualDamageEvent) [Zero Allocations]
-    Note over View: Render Frame Tick Boundary Hits
-    View->>Buffer: Sequentially streams event structs down cache line
-    View->>View: Triggers visual particle pops & audio clips
-    View->>Buffer: Buffer.Clear() [Resets array tracker back to zero]
+```cpp
+#include <vector>
 
-```
-
-#### C# Implementation
-
-```csharp
-namespace Game.Events
+namespace Game::Events
 {
-    // Pure unmanaged value type event notification
-    public struct VisualDamageEvent
+    // Pure POD struct event notification
+    struct VisualDamageEvent
     {
-        public int TargetEntityId;
-        public int DamageAmount;
-    }
+        int TargetEntityId;
+        int DamageAmount;
+    };
 
-    public class CombatSystem
+    class CombatSystem
     {
-        // Pre-allocated frame event buffer array queue
-        public List<VisualDamageEvent> FrameEvents { get; } = new(256);
+    public:
+        // Pre-allocated frame event buffer
+        std::vector<VisualDamageEvent> FrameEvents;
 
-        public void ApplyStrike(ref Model.HealthComponent target, int damage)
+        void ApplyStrike(Model::HealthComponent& target, int damage)
         {
             target.CurrentHp -= damage;
             target.IsDirty = true; // State persistence tracking
 
-            // Transient Event Logging: Zero heap allocations!
-            FrameEvents.Add(new VisualDamageEvent 
-            { 
-                TargetEntityId = target.EntityId, 
-                DamageAmount = damage 
-            });
+            // Transient Event Logging: No heap allocation if vector has reserve()
+            FrameEvents.push_back({ target.EntityId, damage });
         }
-    }
-}
+    };
+};
 
 ```
 
 ## 3. The Central Delegate Table (For Decoupled System Routing)
 
-* **The Concept:** A dictionary lookup map that links a data-driven text keyword directly to a high-performance compiled logic method pointer.
-* **Best Used For:** Mapping external game asset attributes—like AI routine choices or skill types from `definitions.json` (e.g., `"GoToSleep"`, `"ApplyPoison"`)—to code execution pipelines.
+* **The Concept:** A hash map lookup that links a data-driven text keyword directly to a high-performance compiled function pointer.
+* **Best Used For:** Mapping external game asset attributes—like AI routine choices or skill types from `definitions.json`—to code execution pipelines.
 * **The Workflow:** Systems query this database at runtime using data-driven asset strings, instantly resolving actions to compiled functions without heavy runtime conditional testing chains.
 
-#### C# Implementation
+#### C++ Implementation
 
-```csharp
-namespace Game.Ai
+```cpp
+#include <unordered_map>
+#include <functional>
+#include <string>
+
+namespace Game::Ai
 {
-    using System;
-    using System.Collections.Generic;
-
-    public class AiRoutineSystem
+    class AiRoutineSystem
     {
-        // Maps an external configuration string to an executable code delegate method pointer
-        private readonly Dictionary<string, Action<int>> _routingTable = new();
-        private readonly Model.HealthRegistry _registry;
+    private:
+        // Maps an external configuration string to an executable function pointer
+        std::unordered_map<std::string, std::function<void(int)>> _routingTable;
+        Model::HealthRegistry& _registry;
 
-        public AiRoutineSystem(Model.HealthRegistry registry)
+    public:
+        AiRoutineSystem(Model::HealthRegistry& registry) : _registry(registry)
         {
-            _registry = registry;
-            
-            // Registering decoupled structural functions as routing keys at engine boot
-            _routingTable["GoToSleep"] = ExecuteSleepRoutine;
-            _routingTable["FleeFromDanger"] = ExecuteFleeRoutine;
+            _routingTable["GoToSleep"] = [this](int id) { ExecuteSleepRoutine(id); };
+            _routingTable["FleeFromDanger"] = [this](int id) { ExecuteFleeRoutine(id); };
         }
 
-        public void ExecuteAction(string keyword, int entityId)
+        void ExecuteAction(const std::string& keyword, int entityId)
         {
-            if (_routingTable.TryGetValue(keyword, out var routine))
+            if (_routingTable.find(keyword) != _routingTable.end())
             {
-                routine.Invoke(entityId); // Executes instantly with zero string parsing evaluations
+                _routingTable[keyword](entityId); // Executes instantly
             }
         }
 
-        private void ExecuteSleepRoutine(int entityId)
+        void ExecuteSleepRoutine(int entityId)
         {
-            ref var health = ref _registry.GetModifiable(entityId);
+            auto& health = _registry.GetModifiable(entityId);
             health.CurrentHp += 10;
             health.IsDirty = true;
         }
 
-        private void ExecuteFleeRoutine(int entityId) { /* Movement logic... */ }
-    }
+        void ExecuteFleeRoutine(int entityId) { /* Movement logic... */ }
+    };
 }
 
 ```
-
 
 ## 4. The Command-Driven Queue (For Transactional State Mutations)
 
 * **The Concept:** A sequential buffer of transactional "intent" objects that decouple the *request* for a state change from its *execution*.
 * **Best Used For:** High-stakes logical state changes that require strict ordering and safety (e.g., equipping an item, leveling up a stat, or spawning a new NPC).
-* **The Workflow:** Instead of systems calling each other directly (creating "spaghetti" dependencies), they drop a `GameCommand` struct into the `EngineDriver`'s queue. At the beginning of the next `Tick`, the engine drains the queue sequentially, ensuring all state mutations are processed in a controlled, predictable order before the movement or rendering systems run.
+* **The Workflow:** Systems drop a `GameCommand` struct into the `EngineDriver`'s queue. At the beginning of the next `Tick`, the engine drains the queue sequentially, ensuring all state mutations are processed in a controlled, predictable order.
 
 ```mermaid
 graph LR
@@ -168,28 +154,32 @@ graph LR
 
 ```
 
-#### C# Implementation
+#### C++ Implementation
 
-```csharp
-namespace Game.Commands
+```cpp
+#include <queue>
+
+namespace Game::Commands
 {
-    public enum CommandType { EquipItem, UpdateStats, SpawnEntity }
+    enum class CommandType { EquipItem, UpdateStats, SpawnEntity };
 
     // Sequential transaction request
-    public struct GameCommand
+    struct GameCommand
     {
-        public CommandType Type;
-        public int EntityId;
-        public int TargetId; // Used for item IDs or secondary targets
-    }
+        CommandType Type;
+        int EntityId;
+        int TargetId;
+    };
 
-    public class CommandQueue
+    class CommandQueue
     {
-        private readonly Queue<GameCommand> _commands = new();
-        public bool HasCommands => _commands.Count > 0;
-        public void Enqueue(GameCommand cmd) => _commands.Enqueue(cmd);
-        public GameCommand Dequeue() => _commands.Dequeue();
-    }
+    private:
+        std::queue<GameCommand> _commands;
+    public:
+        bool HasCommands() const { return !_commands.empty(); }
+        void Enqueue(GameCommand cmd) { _commands.push(cmd); }
+        GameCommand Dequeue() { auto cmd = _commands.front(); _commands.pop(); return cmd; }
+    };
 }
 
 ```
@@ -202,6 +192,10 @@ namespace Game.Commands
 | **2. Reactive Buffers** | Triggering temporal audio assets, particle emissions, screen shake, and floating text pops. | Pre-allocated global context frame lists. | **Transient** (Wiped clean at the end of each frame). |
 | **3. Delegate Tables** | Directing action strings from `definitions.json` directly to high-speed logic methods. | Immutably stored inside the System Bootstrapper context registry. | **Static** (Set once at engine initialization). |
 | **4. Command Queues** | Mediating state changes (Equip, Stats, Spawn). | Sequential Queue of structs/commands in `EngineDriver`. | **Frame-Bound** (Processed and cleared every tick). |
+
+
+---
+
 
 ## When to use each one
 
@@ -324,7 +318,25 @@ Flag      ECS Event)           Registry     Buffer             Queue
 
 
 
-## Example
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Example: Dynamic Data Flow
 
 In this example, an entity receives a 10 Hit Points.
 
@@ -360,36 +372,26 @@ sequenceDiagram
 
 ### Step 1: Enqueueing the Intent (Command Queue)
 
-Before modifying state, systems declare their intent. This acts as a transactional gatekeeper to ensure deterministic execution and prevent race conditions.
-
-```csharp
-// Inside your System (e.g., CombatSystem)
-public void RequestHealthChange(int entityId, int amount)
+```cpp
+void RequestHealthChange(int entityId, int amount)
 {
-    _engineDriver.AddCommand(new GameCommand { 
-        Type = CommandType.AdjustHealth, 
-        EntityId = entityId, 
-        Value = amount 
-    });
+    _engineDriver.AddCommand({ CommandType::AdjustHealth, entityId, amount });
 }
 
 ```
 
 ### Step 2: Processing the Transaction (EngineDriver)
 
-The `EngineDriver` drains the queue during the `Tick`, ensuring all state mutations occur in a controlled, safe sequence.
-
-```csharp
-// Inside EngineDriver.Tick()
-while (_queue.HasCommands)
+```cpp
+while (_queue.HasCommands())
 {
-    var cmd = _queue.Dequeue();
-    if (cmd.Type == CommandType.AdjustHealth)
+    auto cmd = _queue.Dequeue();
+    if (cmd.Type == CommandType::AdjustHealth)
     {
-        ref var health = ref _registry.GetModifiable(cmd.EntityId);
-        health.CurrentHp += cmd.Value; // Mutate
-        health.IsDirty = true;         // Flag for View
-        _combatSystem.FrameEvents.Add(new VisualDamageEvent { ... }); // FX
+        auto& health = _registry.GetModifiable(cmd.EntityId);
+        health.CurrentHp += cmd.Value;
+        health.IsDirty = true;
+        _combatSystem.FrameEvents.push_back({ cmd.EntityId, cmd.Value });
     }
 }
 
@@ -398,203 +400,86 @@ while (_queue.HasCommands)
 ### Step 3: The View Layer (Reactive & Polling)
 
 **Phase A: Reactive Buffer (Visuals)**
-The View streams the temporary event buffer to create frame-bound FX, then clears it to maintain zero-allocation performance.
 
-```csharp
-// Inside Godot View's _Process loop
-foreach (var evt in _combatSystem.FrameEvents)
+```cpp
+for (const auto& evt : _combatSystem.FrameEvents)
 {
-    SpawnFloatingTextPopUp(evt.TargetEntityId, evt.DamageAmount); 
+    SpawnFloatingText(evt.TargetEntityId, evt.DamageAmount); 
 }
-_combatSystem.FrameEvents.Clear(); 
+_combatSystem.FrameEvents.clear(); 
 
 ```
 
 **Phase B: `IsDirty` Sweep (UI)**
-The View sweeps the components. If `IsDirty` is false, it skips the expensive label-update logic entirely, maximizing frame rate.
 
-```csharp
-// Inside Godot View's _Process loop
-Span<HealthComponent> components = _registry.GetSpan();
-for (int i = 0; i < components.Length; i++)
+```cpp
+auto* pool = _registry.GetPool();
+for (size_t i = 0; i < _registry.GetPoolSize(); ++i)
 {
-    ref var health = ref components[i];
-    if (!health.IsDirty) continue; // High-speed skip
+    if (!pool[i].IsDirty) continue;
 
-    var label = GetNode<Label>($"UI/Unit_{health.EntityId}/HpValue");
-    label.Text = $"{health.CurrentHp} HP";
-    health.IsDirty = false; // Reset
+    UpdateLabel(pool[i].EntityId, pool[i].CurrentHp);
+    pool[i].IsDirty = false;
 }
 
 ```
 
-
-### Why this split works beautifully
-
-If your character stands perfectly still for an hour, their health value remains untouched in memory, the event list stays at `0`, and Godot bypasses any layout redraw logic entirely—keeping your UI processing cost at zero. The moment a `10 HP` modification lands, your simulation registers the update at lightning speed, and your View effortlessly polls the data to reflect it perfectly on screen exactly when needed.
-
-* * *
+---
 
 ## 5. Dense Life Cycles: Object Pools & Blind Sweeps
 
-While the four previous pipelines govern sparse notifications, structural data modifications, and decoupling routers, certain high-velocity game genres (e.g., Bullet Hells, Gauntlet-like swarm hordes, or large army simulation battlefields) introduce a different performance challenge.
+For high-velocity simulation (e.g., 5,000 projectiles), we use **Object Pool + Sequential Blind Sweep**.
 
-If an engine forces 5,000 projectiles or 3,000 active swarm enemies to update their positions every single frame, checking an `IsDirty` tracking flag becomes a performance bottleneck. Because 100% of the data structures are continuously moving and reacting, 100% of the tracking flags return `true`. 
+### Production C++ Blueprint: The Bullet Pool
 
-For dense, short-to-medium-lived entity arrays, we bypass `IsDirty` checking, reactive event buffers, and runtime engine instantiations entirely. Instead, we deploy an **Object Pool + Sequential Blind Sweep**.
+#### 1. The Pure Model Layout
 
-## The Performance Workflow
+```cpp
+struct BulletComponent {
+    float X, Y;
+    float VX, VY;
+    bool IsActive;
+};
 
-1. **The Object Pool:** When a scene loads, a flat, contiguous array chunk of unmanaged value type structures is allocated up front. "Spawning" an object is no longer a costly heap allocation or runtime engine instantiation; it is simply flipping an existing slot's `IsActive` primitive boolean from `false` to `true`. "Destroying" it simply flips the boolean back to `false`.
-2. **The Blind Sweep:** Because values are modifying uniformly, systems run linear loops down the sequential array slice. The CPU L1/L2 prefetcher streams the contiguous chunk windows straight down hardware cache lines with zero index fragmentation or heap address hopping. The system checks the `IsActive` bit; if alive, it blindly updates positions or passes the coordinate layout arrays straight to a batch-rendering graphics loop.
-
-For a bullet hell game spawning 5,000 projectiles on screen, the `IsDirty` pattern is the wrong choice because it is designed for **long-lived state tracking, not continuous object lifecycle management (spawning and destroying)**.
-
-
-### Why Object Pools & Blind Sweeps shine in Bullet Spawning
-
-* **100% of bullets are moving every single frame.**
-* **Bullets are constantly being spawned and instantly destroyed** as they leave the screen boundary.
-
-#### 1. Object Pooling (Zero Real-Time Instantiations)
-
-Instantiating nodes at runtime (e.g., Godot's `.Instantiate()` or `QueueFree()`) causes massive heap fragmentation and triggers garbage collection spikes. Instead, pre-allocate an array of 5,000 bullet structures in your Model registry when the level loads. "Spawning" a bullet simply means finding an inactive index in your array, changing its `IsActive` bit to `true`, and resetting its coordinates.
-
-#### 2. The Blind Frame Sweep (No Flags Allowed)
-
-Because active bullets are guaranteed to change every single frame, your View layer shouldn't check if they are "dirty". It should blindly iterate through the array, read the positions of active bullets, and draw them directly to the screen using fast immediate-mode graphics (like Godot's `RenderingServer` or Raylib's `DrawTextureV`).
-
-### Production C# Blueprint: The Bullet Pool Pipeline
-
-Here is how a high-performance bullet hell pipeline is actually structured using pure unmanaged C# arrays:
-
-#### 1. The Pure Model Layout (Pre-Allocated Memory Chunk)
-
-```csharp
-public struct BulletComponent
-{
-    public float X, Y;
-    public float VelocityX, VelocityY;
-    public bool IsActive; // Tells the system whether to process this memory slot
-}
-
-public class BulletRegistry
-{
-    // Pre-allocate the absolute maximum number of bullets allowed on screen at once
-    public readonly BulletComponent[] Pool = new BulletComponent[5000];
+class BulletRegistry {
+public:
+    BulletComponent Pool[5000];
     
-    public void SpawnBullet(float x, float y, float vx, float vy)
-    {
-        // Find the first dead slot and claim it instantly without creating new heap memory
-        for (int i = 0; i < Pool.Length; i++)
-        {
-            if (!Pool[i].IsActive)
-            {
-                Pool[i].X = x;
-                Pool[i].Y = y;
-                Pool[i].VelocityX = vx;
-                Pool[i].VelocityY = vy;
-                Pool[i].IsActive = true;
+    void SpawnBullet(float x, float y, float vx, float vy) {
+        for (auto& bullet : Pool) {
+            if (!bullet.IsActive) {
+                bullet = { x, y, vx, vy, true };
                 return;
             }
         }
     }
-}
+};
 
 ```
 
-#### 2. The Controller Logic (Blind Parallel Update Loop)
+#### 2. The Controller Logic
 
-```csharp
-public class BulletMovementSystem
-{
-    public void ProcessBullets(Span<BulletComponent> bullets, float deltaTime)
-    {
-        for (int i = 0; i < bullets.Length; i++)
-        {
-            ref var bullet = ref bullets[i];
-            if (!bullet.IsActive) continue;
-
-            // Blindly update coordinates. No "IsDirty" flag tracking overhead!
-            bullet.X += bullet.VelocityX * deltaTime;
-            bullet.Y += bullet.VelocityY * deltaTime;
-
-            // Despawn check: If it flies off-screen, instantly free up the slot
-            if (bullet.X < -100 || bullet.X > 2000 || bullet.Y < -100 || bullet.Y > 2000)
-            {
-                bullet.IsActive = false;
-            }
-        }
+```cpp
+void ProcessBullets(BulletComponent* bullets, size_t count, float dt) {
+    for (size_t i = 0; i < count; ++i) {
+        if (!bullets[i].IsActive) continue;
+        bullets[i].X += bullets[i].VX * dt;
+        bullets[i].Y += bullets[i].VY * dt;
+        if (bullets[i].X < -100 || bullets[i].X > 2000) bullets[i].IsActive = false;
     }
 }
 
 ```
 
-#### 3. The View System (Blind Fast Batch Rendering)
+#### 3. The View System
 
-```csharp
-public class BulletRenderView
-{
-    // Using a fast, low-level rendering api (like Godot's RenderingServer)
-    public void DrawActiveBullets(ReadOnlySpan<BulletComponent> bullets)
-    {
-        for (int i = 0; i < bullets.Length; i++)
-        {
-            in var bullet = ref bullets[i];
-            
-            // If the slot is dead, skip it. If it is alive, render it blindly.
-            if (!bullet.IsActive) continue;
-
-            // Direct hardware draw call using raw struct positions. No UI Node updates!
-            LowLevelGraphicsServer.DrawTexture(BulletTexture, bullet.X, bullet.Y);
-        }
+```cpp
+void DrawActiveBullets(const BulletComponent* bullets, size_t count) {
+    for (size_t i = 0; i < count; ++i) {
+        if (!bullets[i].IsActive) continue;
+        LowLevelGraphics::Draw(bullets[i].X, bullets[i].Y);
     }
 }
-
-```
-
-## The Tandem
-
-### Part 1: The Object Pool (Solving the "Instance" Problem)
-
-When you have thousands of short-lived instances (like bullets, floating damage numbers, sparks, or ambient debris), the worst thing you can do is dynamically create (`new`) and destroy (`Delete`/`QueueFree`) them.
-
-Frequent instantiations cause **Garbage Collection (GC) spikes** and **Memory Fragmentation**. The CPU wastes critical time searching your computer's RAM for open patches of memory to allocate an object, only to throw it away a second later.
-
-The **Object Pool** solves this by completely neutralizing allocation overhead:
-
-* **Pre-allocation:** You request a massive, flat chunk of memory up front (e.g., an array of 5,000 bullet structs).
-* **Recycling:** "Spawning" an object is no longer an instantiation; it is simply flipping an existing array slot's `IsActive` boolean from `false` to `true`. "Destroying" it just flips that boolean back to `false`.
-
-Memory allocation happens **exactly once** when the game scene loads, resulting in zero real-time runtime allocations.
-
-### Part 2: The Blind Sweep (Solving the "Tracking" Problem)
-
-Now that all your active and inactive instances are packed sitting next to each other in a clean array, how should the systems process them?
-
-As established, checking an `IsDirty` flag is a great optimization for **sparse changes** (where most things are asleep). But for high-velocity instances, checking an array of booleans just to see if a moving object has moved is redundant overhead.
-
-The **Blind Sweep** capitalizes on CPU hardware optimization:
-
-* **Linear Array Traversal:** The system loops from index `0` straight to `4999`.
-* **L1/L2 Cache Prefetching:** Because your components are flat unmanaged value structs lined up sequentially, the CPU doesn't have to hop around the heap searching for scattered pointers. It grabs whole blocks of bullets simultaneously, sliding them directly down the ultra-fast hardware cache lines.
-* **Streamlined Branching:** The system makes one simple check: `if (!bullet.IsActive) continue;`. If it's active, it blindly advances its position or renders its texture—no further gatekeeping required.
-
-```mermaid
-graph TD
-    subgraph RAM [Pre-Allocated Heap Memory Chunk]
-        Array[BulletComponent Storage Array]
-    end
-
-    subgraph CPU [CPU Core Pipelines]
-        Cache[L1 / L2 Hardware Cache Line]
-        ALU[Execution Matrix / Logic Systems]
-    end
-
-    Array -->|Stream contiguous block windows| Cache
-    Cache -->|1. Check IsActive bit| ALU
-    ALU -->|2. Blindly update active coordinates| Cache
-    Cache -->|3. Flush modifications straight to GPU| GPU[Low-Level Rendering Engine]
 
 ```
 
@@ -649,3 +534,4 @@ To wrap your mind around your entire event and instance toolbelt, use these two 
 | **Data-Driven Configuration** (AI routine strings, Skill blueprints from JSON) | **Static** (Set at boot time) | Permanent | **Central Delegate Routing Tables** |
 | **Swarms / Projectiles** (Bullets, Army Troops, Horde Enemies, Particles) | **Dense** (100% change every frame) | Short/Medium | **Object Pools + Blind Sweeps** |
 | **State Mutations** (Equipping items, Stat leveling, NPC spawning) | **Discrete** (Logic-driven events) | Transient | **Command-Driven Queue** |
+
