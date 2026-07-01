@@ -1,7 +1,5 @@
 # Enums and Flags
 
-# Enums and Flags
-
 # Enums
 
 In C++, an **enum** is a user-defined type that defines a set of named constants representing integral values. In modern C++, **`enum class`** (scoped enums) is preferred to create readable, type-safe code when a variable can only take one of a predefined set of values.
