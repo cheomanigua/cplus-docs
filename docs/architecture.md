@@ -124,62 +124,89 @@ Modern CPUs have tiny but blazing-fast memory areas called **L1 and L2 caches** 
 
 #### Example 1: Simple MVC Style (Good for Smaller Games / UI)
 
+In C++, you would typically use `std::string` and standard structures. To maintain a clear boundary, the `Model` remains a plain data struct (POD - Plain Old Data), and the `View` acts upon it.
+
 ```csharp
+#include <string>
+
 // Data from JSON (loaded once)
-public class ShipClassConfig { public int BaseHull; /* ... */ }
-public class WeaponDefConfig { public string Name; public int Damage; /* ... */ }
+struct ShipClassConfig { 
+    int baseHull; 
+    /* ... */ 
+};
+
+struct WeaponDefConfig { 
+    std::string name; 
+    int damage; 
+    /* ... */ 
+};
 
 // Model - holds live game data
-public class ShipModel {
-    public string ClassName;
-    public int CurrentHull;
-    public WeaponDefConfig Weapon; // reference to shared blueprint
-}
+struct ShipModel {
+    std::string className;
+    int currentHull;
+    // Pointer to shared blueprint to avoid duplicating large config data
+    const WeaponDefConfig* weapon; 
+};
 
 // Factory
-public class ShipFactory { /* ... see previous version */ }
+class ShipFactory {
+public:
+    // ... factory logic using the same interface pattern ...
+};
 
 // View
-public class ShipView {
-    public void Render(ShipModel ship) {
-        // Use ship.Weapon.SpritePath etc.
+class ShipView {
+public:
+    void Render(const ShipModel& ship) {
+        // Use ship.weapon->name etc.
+        // Accessing via pointer (ship.weapon)
     }
-}
+};
 ```
 
-#### Example 2: ECS Style (Better for Performance-Heavy Games)
+### Example 2: ECS Style (Better for Performance-Heavy Games)
 
-```csharp
-// Components = pure data (stored in flat arrays)
-public struct CombatStats {
-    public int EntityId;
-    public int Hull;
-    public int Shields;
-}
+In C++, ECS architectures leverage the CPU cache by storing components in contiguous memory (often using `std::vector` or raw arrays) and using `std::span` (C++20) to process these ranges efficiently.
 
-public struct WeaponAttachment {
-    public int EntityId;
-    public int WeaponId;        // index into blueprint array
-    public float CooldownTimer;
-}
+```cpp
+#include <span>
+#include <vector>
+
+// Components = pure data stored in contiguous memory
+struct CombatStats {
+    int entityId;
+    int hull;
+    int shields;
+};
+
+struct WeaponAttachment {
+    int entityId;
+    int weaponId;      // index into blueprint array
+    float cooldownTimer;
+};
 
 // System - processes contiguous data efficiently
-public class WeaponFireSystem {
-    private readonly WeaponDefConfig[] _blueprints;
+class WeaponFireSystem {
+    const std::vector<WeaponDefConfig>& blueprints;
 
-    public void Update(Span<WeaponAttachment> weapons, float deltaTime) {
-        for (int i = 0; i < weapons.Length; i++) {
-            ref var w = ref weapons[i];
-            if (w.CooldownTimer > 0) {
-                w.CooldownTimer -= deltaTime;
+public:
+    WeaponFireSystem(const std::vector<WeaponDefConfig>& bp) : blueprints(bp) {}
+
+    void Update(std::span<WeaponAttachment> weapons, float deltaTime) {
+        for (auto& w : weapons) {
+            if (w.cooldownTimer > 0) {
+                w.cooldownTimer -= deltaTime;
                 continue;
             }
-            var bp = _blueprints[w.WeaponId];
-            // Fire logic using bp.Damage...
-            w.CooldownTimer = bp.Cooldown;
+            
+            const auto& bp = blueprints[w.weaponId];
+            // Fire logic using bp.damage...
+            w.cooldownTimer = bp.cooldown;
         }
     }
-}
+};
+
 ```
 
 **Key advantage**: All `CombatStats` live in one big contiguous array → maximum cache efficiency.
@@ -209,6 +236,11 @@ public class WeaponFireSystem {
    - Validate JSON at load.  
    - Add a debug inspector for entities.
 
+### Key Differences in the C++ Implementation
+
+* **Structs vs Classes**: In C++, `struct` is often preferred for pure data-holding objects (Model/Config), as members are public by default, which aligns with the simplicity required for a "Model" layer.
+* **Memory Management**: By using `const WeaponDefConfig*`, we ensure the `ShipModel` is merely referencing the shared, immutable blueprint data rather than copying it, which is crucial for cache efficiency.
+* **Memory Layout**: Unlike C# where objects are reference types, these C++ structures allow you to control memory layout more precisely, which is the foundational requirement for the high-performance ECS patterns mentioned in the documentation.
 
 
 ## Common Trade-offs & Tips
