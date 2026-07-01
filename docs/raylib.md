@@ -7,7 +7,7 @@
 ### Normalization
 
 ```c
-// 2. Movement Logic (Moving toward destination)
+// Movement Logic (Moving toward destination)
 if (isMoving) {
     Vector2 pos = {ussPasadenaPos.x, ussPasadenaPos.y};
     Vector2 dir = Vector2Subtract(destination, pos);
@@ -26,7 +26,7 @@ if (isMoving) {
 ### Lerp
 
 ```c
-// 2. Movement Logic (Moving toward destination)
+// Movement Logic (Moving toward destination)
 if (isMoving) {
   // 0.1f is the interpolation factor (tweak this for speed)
   // A value of 0.1f means "move 10% of the remaining distance per frame"
@@ -44,7 +44,7 @@ if (isMoving) {
 ### Custom
 
 ```c
-// 2. Movement Logic (Moving toward destination)
+// Movement Logic (Moving toward destination)
 if (isMoving) {
     float dx = destination.x - ussPasadenaPos.x;
     float dy = destination.y - ussPasadenaPos.y;

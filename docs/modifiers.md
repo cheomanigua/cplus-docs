@@ -34,18 +34,18 @@ By making the `Value` a signed float, you treat all modifications (buffs/debuffs
 
 Your engine no longer differentiates between "gear bonuses" and "status effects." They both become `AttributeModifierComponent` attachments.
 
-**`Core/FormulaProcessor.cs`**
+**`Core/FormulaProcessor.cpp`**
 
-```csharp
-public float ResolveAttribute(int entityId, string attributeName) {
+```cpp
+float FormulaProcessor::ResolveAttribute(int entityId, const std::string& attributeName) {
     float baseVal = GetBaseAttribute(entityId, attributeName);
-    float netModifier = 0;
+    float netModifier = 0.0f;
 
     // Get all modifiers from all sources (Gear, PotionOfMight, Curses)
-    var modifiers = GetComponentPool<AttributeModifierComponent>().GetForEntity(entityId);
+    auto modifiers = GetComponentPool<AttributeModifierComponent>()->GetForEntity(entityId);
     
-    foreach (var modComponent in modifiers) {
-        foreach (var mod in modComponent.Modifiers) {
+    for (const auto& modComponent : modifiers) {
+        for (const auto& mod : modComponent.Modifiers) {
             if (mod.Target == attributeName) {
                 netModifier += mod.Value; // Automatically handles negative values
             }
@@ -58,9 +58,9 @@ public float ResolveAttribute(int entityId, string attributeName) {
 
 ### 3. Why This "Value-Agnostic" Design Wins
 
-* **Uniform Logic**: The `StatusEffectSystem` and the `EquipmentSystem` now share the exact same code path. If a player drinks a `PotionOfMight`, you simply attach an `AttributeModifierComponent` with `{"Target": "Strength", "Value": 5}` for the duration of the spell.
+* **Uniform Logic**: The `StatusEffectSystem` and the `EquipmentSystem` now share the exact same code path. If a player drinks a `PotionOfMight`, you simply attach an `AttributeModifierComponent` with `{"Target": "Strength", "Value": 5.0f}` for the duration of the spell.
 * **Stacking Mechanics**: This design natively supports stacking. If a player wears two rings that both provide `+5 Strength`, the `FormulaProcessor` loop simply sums them to `+10`. You do not need to write extra "stacking logic".
-* **Data Flexibility**: You can introduce environmental penalties (e.g., "Heavy Armor" reducing "Agility" by 3) just by creating a new component tag in your data files, without writing a single line of new C# code.
+* **Data Flexibility**: You can introduce environmental penalties (e.g., "Heavy Armor" reducing "Agility" by 3) just by creating a new component tag in your data files, without writing a single line of new C++ code.
 
 ### 4. Implementation Checklist for the Engine
 
@@ -71,6 +71,7 @@ To ensure this works at scale in your ECS:
 
 This approach is highly performant because it avoids complex conditional logic (if-else branches) inside your combat loop, relying instead on a simple linear aggregation of modifiers.
 
+---
 
 ## Dirty Flag
 
@@ -84,38 +85,43 @@ We add a `bool _isDirty` flag to the entity's cache. If `true`, the `FormulaProc
 
 ### 2. Implementation
 
-**`Core/EntityRegistry.cs`**
+**`Core/EntityRegistry.h`**
 
-```csharp
-public class EntityAttributesCache {
-    private struct CacheEntry {
-        public float CachedValue;
-        public bool IsDirty;
-    }
-    
+```cpp
+struct CacheEntry {
+    float CachedValue;
+    bool IsDirty;
+};
+
+class EntityAttributesCache {
+private:
     // Maps EntityId -> AttributeName -> Cache
-    private Dictionary<int, Dictionary<string, CacheEntry>> _cache = new();
+    std::unordered_map<int, std::unordered_map<std::string, CacheEntry>> _cache;
 
-    public void MarkDirty(int entityId) {
+public:
+    void MarkDirty(int entityId) {
         // Logic to set all attributes for this entity to dirty
-        foreach (var attr in _cache[entityId].Keys) {
-            _cache[entityId][attr] = new CacheEntry { IsDirty = true };
+        if (_cache.find(entityId) != _cache.end()) {
+            for (auto& [attr, entry] : _cache[entityId]) {
+                entry.IsDirty = true;
+            }
         }
     }
-}
+};
 
 ```
 
-**`Core/FormulaProcessor.cs` (Optimized)**
+**`Core/FormulaProcessor.cpp` (Optimized)**
 
-```csharp
-public float GetAttributeTotal(int entityId, string attributeName) {
-    if (_cache[entityId][attributeName].IsDirty) {
+```cpp
+float FormulaProcessor::GetAttributeTotal(int entityId, const std::string& attributeName) {
+    CacheEntry& entry = _cache[entityId][attributeName];
+    if (entry.IsDirty) {
         // 1. Perform the expensive summation loop
         // 2. Store in CachedValue
         // 3. Set IsDirty = false
     }
-    return _cache[entityId][attributeName].CachedValue; // O(1) return
+    return entry.CachedValue; // O(1) return
 }
 
 ```
@@ -140,29 +146,28 @@ To implement the **Dirty Flag** logic, we need to ensure the system is thread-sa
 
 ### Implementation
 
-I have assumed that `_cache` is a `Dictionary<int, Dictionary<string, CacheEntry>>` where `CacheEntry` is a struct containing the `CachedValue` and `IsDirty` flag.
+I have assumed that `_cache` is a `std::unordered_map<int, std::unordered_map<std::string, CacheEntry>>` where `CacheEntry` is a struct containing the `CachedValue` and `IsDirty` flag.
 
-```csharp
-public float GetAttributeTotal(int entityId, string attributeName)
+```cpp
+float FormulaProcessor::GetAttributeTotal(int entityId, const std::string& attributeName)
 {
     // Ensure the entity and attribute exist in the cache
-    if (!_cache.ContainsKey(entityId) || !_cache[entityId].ContainsKey(attributeName))
+    if (_cache.find(entityId) == _cache.end() || _cache[entityId].find(attributeName) == _cache[entityId].end())
     {
-        return 0f; // Return default if not found
+        return 0.0f; // Return default if not found
     }
 
-    ref CacheEntry entry = ref CollectionsMarshal.GetValueRefOrAddDefault(_cache[entityId], attributeName, out _);
+    CacheEntry& entry = _cache[entityId][attributeName];
 
     if (entry.IsDirty)
     {
         // 1. Perform the expensive summation loop
-        // We aggregate all AttributeModifierComponent values for this entity
         float total = CalculateBaseAttribute(entityId, attributeName);
-        var modifiers = GetComponentPool<AttributeModifierComponent>().GetForEntity(entityId);
+        auto modifiers = GetComponentPool<AttributeModifierComponent>()->GetForEntity(entityId);
         
-        foreach (var modComponent in modifiers)
+        for (const auto& modComponent : modifiers)
         {
-            foreach (var mod in modComponent.Modifiers)
+            for (const auto& mod : modComponent.Modifiers)
             {
                 if (mod.Target == attributeName)
                 {
@@ -185,7 +190,7 @@ public float GetAttributeTotal(int entityId, string attributeName)
 
 ### Key Technical Details
 
-* **`ref` and `CollectionsMarshal**`: In the implementation above, I used `ref` (via `CollectionsMarshal.GetValueRefOrAddDefault` if using modern .NET) to ensure we are modifying the struct directly in the dictionary memory. This avoids copying the struct, modifying the copy, and forgetting to put it back into the dictionary.
+* **Reference Access**: In the implementation above, I used a reference (`CacheEntry& entry`) to ensure we are modifying the struct directly in the map's memory. This avoids copying the struct, modifying the copy, and forgetting to put it back into the map.
 * **Lazy Evaluation**: The expensive summation only triggers when `IsDirty` is `true`. Any system modifying an entity's gear or status effects must call `MarkDirty(entityId)` to reset this flag.
 * **Performance**: By storing the result in `CachedValue`, subsequent calls to `GetAttributeTotal` are strictly `O(1)` memory access, which is ideal for performance-heavy game loops.
 
@@ -193,23 +198,20 @@ public float GetAttributeTotal(int entityId, string attributeName)
 
 Whenever an `AttributeModifierComponent` is added, removed, or has its values changed by an item equip/unequip or status effect change, simply trigger:
 
-```csharp
-public void MarkDirty(int entityId) {
-    if (_cache.TryGetValue(entityId, out var attributes)) {
-        foreach (var key in attributes.Keys) {
-            // Use ref to modify the struct directly in the dictionary
-            ref var entry = ref CollectionsMarshal.GetValueRefOrNullRef(attributes, key);
-            if (!System.Runtime.CompilerServices.Unsafe.IsNullRef(ref entry)) {
-                entry.IsDirty = true;
-            }
+```cpp
+void EntityRegistry::MarkDirty(int entityId) {
+    if (_cache.find(entityId) != _cache.end()) {
+        for (auto& [attr, entry] : _cache[entityId]) {
+            entry.IsDirty = true;
         }
     }
 }
 
 ```
 
-This design ensures that your combat logic remains performant regardless of how many modifiers or status effects are stacked on your entities. Does this integration fit into your existing `FormulaProcessor` structure, or would you like to see how to handle the `EntityRegistry` notification system to automate the `MarkDirty` calls?
+This design ensures that your combat logic remains performant regardless of how many modifiers or status effects are stacked on your entities.
 
+---
 
 ## Weapons
 
@@ -254,20 +256,20 @@ Instead of adding fields like `IsPoisonous` or `FireDamage` to every weapon (whi
 
 When the `ActionSystem` performs an "Attack," it doesn't just calculate damage. It checks if the weapon entity has an `OnHitEffects` component.
 
-**`Core/Actions/AttackAction.cs`**
+**`Core/Actions/AttackAction.cpp`**
 
-```csharp
-public void Execute(int attackerId) {
-    var weaponId = registry.GetWeapon(attackerId);
-    var effects = weaponData[weaponId].OnHitEffects;
+```cpp
+void AttackAction::Execute(int attackerId) {
+    int weaponId = registry.GetWeapon(attackerId);
+    auto& effects = weaponData[weaponId].OnHitEffects;
 
     // 1. Calculate Base Damage (FormulaProcessor)
     // 2. Apply Damage to Target
     
     // 3. Dispatch Effects
-    foreach (var effect in effects) {
+    for (const auto& effect : effects) {
         // Factory creates a new StatusEffect entity on the Target
-        StatusEffectSystem.Apply(targetId, effect.Tag, effect.Properties);
+        StatusEffectSystem::Apply(targetId, effect.Tag, effect.Properties);
     }
 }
 
@@ -277,14 +279,14 @@ public void Execute(int attackerId) {
 
 * **Stacking Logic**: If a player uses a "Flaming Oil" item on their sword, you are effectively just adding a `FireStatusComponent` to the weapon's `OnHitEffects` list at runtime. The `AttackAction` loop will automatically detect it and apply both Poison and Fire.
 * **Separation of Concerns**: The `weapons.json` only contains data. The `StatusEffectSystem` contains the logic for *how* poison ticks down or *how* fire spreads.
-* **No Hardcoding**: You can create a "Frost Sword" by simply creating a new `FrostStatusComponent` in `status_effects.json` and adding it to the `OnHitEffects` array in `weapons.json`. No changes to `AttackAction.cs` are ever needed.
+* **No Hardcoding**: You can create a "Frost Sword" by simply creating a new `FrostStatusComponent` in `status_effects.json` and adding it to the `OnHitEffects` array in `weapons.json`. No changes to `AttackAction.cpp` are ever needed.
 
 ### 4. Implementation Checklist
 
 * **StatusEffectRegistry**: A registry that maps the `Tag` (e.g., `PoisonStatusComponent`) to a specific `IEffect` implementation.
 * **Lifecycle Management**: Since these effects have durations (`TotalDuration`), the `StatusEffectSystem` must iterate through all active effects, reduce their `RemainingDuration`, and remove the component from the entity when it hits zero.
 
-This approach creates a **"Plugin" architecture** for your items—where the weapon is just a host for modular combat behaviors. Would you like to see how to implement the `StatusEffectSystem` to ensure it handles multiple overlapping effects (e.g., a target being poisoned AND on fire simultaneously) without performance degradation?
+---
 
 ## Status Effect System
 
@@ -298,24 +300,22 @@ Instead of a complex list of state variables, we treat every status effect as a 
 
 The `StatusEffectSystem` is responsible for updating these components every tick and removing them when the duration reaches zero.
 
-**`Core/Systems/StatusEffectSystem.cs`**
+**`Core/Systems/StatusEffectSystem.cpp`**
 
-```csharp
-public class StatusEffectSystem {
-    public void Update(float deltaTime) {
-        // Query only entities that have status effects using the EntitySieve
-        var activeEffectEntities = _entitySieve.GetEntitiesWithMask(ComponentMasks.StatusEffect);
+```cpp
+void StatusEffectSystem::Update(float deltaTime) {
+    // Query only entities that have status effects using the EntitySieve
+    auto activeEffectEntities = _entitySieve.GetEntitiesWithMask(ComponentMasks::StatusEffect);
+    
+    for (int entityId : activeEffectEntities) {
+        auto effects = _registry.GetComponents<StatusEffectComponent>(entityId);
         
-        foreach (var entityId in activeEffectEntities) {
-            var effects = _registry.GetComponents<StatusEffectComponent>(entityId);
+        for (auto& effect : effects) {
+            effect.RemainingDuration -= deltaTime;
             
-            foreach (var effect in effects) {
-                effect.RemainingDuration -= deltaTime;
-                
-                if (effect.RemainingDuration <= 0) {
-                    _registry.RemoveComponent(entityId, effect);
-                    _registry.MarkDirty(entityId); // Trigger re-calculation
-                }
+            if (effect.RemainingDuration <= 0) {
+                _registry.RemoveComponent(entityId, effect);
+                _registry.MarkDirty(entityId); // Trigger re-calculation
             }
         }
     }
@@ -337,5 +337,3 @@ public class StatusEffectSystem {
 4. **Removal**: Once `RemainingDuration <= 0`, the component is removed, and the entity is marked as "Dirty" again to revert the attribute bonuses/penalties.
 
 This modular design means that if you want to create a new effect—like "Frost" which slows movement—you just create a `FrostStatusComponent`, define the duration in `status_effects.json`, and the system will handle it automatically without you writing any custom code for that specific effect.
-
-Does this lifecycle satisfy your performance requirements for the RPG combat loop, or would you like to explore how to **serialize** these active status effects (saving the game) in a way that respects your data-driven architecture?
