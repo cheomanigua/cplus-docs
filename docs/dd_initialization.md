@@ -118,12 +118,14 @@ The system treats the `CharacterStats` struct as a cached state. When an item (l
 This process is centralized within the `EntityRegistry.ProcessCombat` loop to ensure consistency:
 
 ```csharp
-public void ProcessCombat()
+void ProcessCombat()
 {
-    var activeIds = GetActiveEntities();
-    for (int i = 0; i < activeIds.Length; i++)
+    // Assuming GetActiveEntities returns a container (e.g., std::vector or std::span)
+    auto activeIds = GetActiveEntities(); 
+    for (size_t i = 0; i < activeIds.size(); ++i)
     {
-        ref var stats = ref _statsSieve.Get(activeIds[i]);
+        // Using a reference to access the component directly in the pool
+        StatsComponent& stats = _statsSieve.Get(activeIds[i]);
         
         if (stats.IsDirty) 
         {
@@ -134,7 +136,6 @@ public void ProcessCombat()
         }
     }
 }
-
 ```
 
 ### 4. Why This Pattern is Robust
@@ -153,38 +154,38 @@ This architecture ensures that "adding a Ring of Strength" or "removing a Helmet
 
 This document explains the design principles behind the current combat engine architecture, focusing on the trade-offs between reflection-based attribute processing and data-driven entity definitions.
 
-## 1. The Current Architecture: Reflection + Structs
+## 1. The Current Architecture: Template-based Processing + Structs
 
 The system utilizes a **Data-Oriented Design (DOD)** approach to ensure high performance while maintaining a data-driven configuration model. The core of this architecture relies on two distinct layers:
 
 | Component Layer | Function |
 | --- | --- |
 | **Memory Schema (Structs)** | Defines the physical layout of entity data (e.g., `CharacterStats`). This provides direct memory access and cache efficiency. |
-| **Reflection Layer** | Binds JSON configuration data to the hard-coded memory structures at runtime, allowing the `FormulaProcessor` to access fields dynamically. |
+| **Parsing Layer** | Binds JSON configuration data to the hard-coded memory structures at startup, allowing the `FormulaProcessor` to access fields efficiently. |
 | **Instance Data (JSON)** | Stores the specific configuration (races, classes) that defines entity instances without altering the underlying engine logic. |
 
 ## 2. Why Attribute Changes Require Codebase Updates
 
-In the current system, attributes are defined as members of a C# `struct` using explicit `[FieldOffset]` attributes. This is necessary for **blazing fast performance**:
+In the current system, attributes are defined as members of a C++ `struct` (often utilizing `alignas` or manual layout strategies). This is necessary for **blazing fast performance**:
 
-* **Memory Layout:** By using `struct` with fixed offsets, the system ensures data is tightly packed, minimizing cache misses during combat loops.
-* **Compiler Requirements:** C# is a statically typed, compiled language. The compiler must know the memory layout (including field names and offsets) at compile time.
-* **Result:** Adding an attribute like `Dexterity` requires adding a field to the `CharacterStats` struct so the memory allocator knows exactly where to store that specific value.
+* **Memory Layout:** By using `struct` with fixed layout, the system ensures data is tightly packed, minimizing cache misses during combat loops.
+* **Compiler Requirements:** C++ is a statically typed, compiled language. The compiler must know the memory layout (including field offsets and sizes) at compile time.
+* **Result:** Adding an attribute like `Dexterity` requires adding a field to the `CharacterStats` struct so the memory allocator and the systems processing the data know exactly where to store and retrieve that specific value.
 
 ## 3. Why Race/Class Changes Do Not
 
-Adding new entities, such as a new race or class, requires no changes to the C# source code. This is because these entities are **Data-Driven Instances** rather than **Memory Schemas**:
+Adding new entities, such as a new race or class, requires no changes to the C++ source code. This is because these entities are **Data-Driven Instances** rather than **Memory Schemas**:
 
-* **Dynamic Dictionaries:** The `Controller` loads races and classes into `Dictionary<string, RaceData>` structures at runtime.
-* **Decoupled Logic:** The engine logic does not explicitly reference specific race names. It simply retrieves a `RaceData` object from the dictionary based on a key provided in a JSON blueprint.
-* **Conclusion:** Adding an "Elf" race is simply adding a new entry to the `races.json` file; the `JsonSerializer` handles the instantiation, and the engine logic remains identical.
+* **Dynamic Maps:** The `Controller` loads races and classes into `std::unordered_map<std::string, RaceData>` structures at runtime.
+* **Decoupled Logic:** The engine logic does not explicitly reference specific race names. It simply retrieves a `RaceData` object from the map based on a key (often a hashed string) provided in a JSON blueprint.
+* **Conclusion:** Adding an "Elf" race is simply adding a new entry to the `races.json` file; the JSON parser handles the instantiation, and the engine logic remains identical.
 
 ## 4. Summary of Design Philosophy
 
 The system intentionally creates a trade-off between **Schema Rigidity** and **Content Flexibility**:
 
-* **High Performance (Attributes):** By "paying" the one-time cost of updating a C# struct, you gain direct memory access that cannot be matched by dynamic object lookups.
-* **High Flexibility (Races/Classes):** By using a dictionary-based loading system, you maintain the ability to iterate on game content (the "recipes") rapidly without recompilation.
+* **High Performance (Attributes):** By "paying" the one-time cost of updating a C++ struct, you gain direct memory access that cannot be matched by dynamic object/map lookups.
+* **High Flexibility (Races/Classes):** By using a map-based loading system, you maintain the ability to iterate on game content (the "recipes") rapidly without recompilation.
 
 This hybrid approach ensures the engine remains performant in the "hot" execution path (combat) while remaining highly configurable in the design layer.
 
@@ -194,23 +195,23 @@ This hybrid approach ensures the engine remains performant in the "hot" executio
 
 To understand why you might choose one over the other, it helps to view them as two different philosophies for how your code "talks" to your data.
 
-### 1. Reflection: The "Automatic Detective"
+### 1. Data Mapping (The "C++ Alternative" to Reflection)
 
-Reflection is a feature of C# that allows your code to inspect itself while it is running. It treats your classes as "live" databases.
+Since C++ lacks the native runtime reflection found in C#, the "Automatic Detective" approach is replaced by **Data Mapping** or **Static Registration**. You treat your classes as "fixed schemas" rather than live databases.
 
-* **How it works**: You tell the engine, "Look at this `CharacterStats` class, find the property named `Strength`, and tell me its value."
-* **The Workflow**: You keep your C# classes structured with explicit properties like `public int Strength { get; set; }`. The code "discovers" these properties at runtime using the `Type` and `FieldInfo` metadata.
-* **The "Convenience"**: You have strong, type-safe C# objects. You can use dot-notation (e.g., `stats.Strength`) throughout your code, and the compiler will catch typos at build time.
-* **The Drawback**: If you want to add an attribute like "Dexterity," you **must** update the `CharacterStats` class definition in C# and recompile. It is "data-driven" for the *values*, but "code-driven" for the *schema*.
+* **How it works**: You create a mapping layer (or use a library like `nlohmann/json` or `rttr`) that acts as a bridge. You tell the engine, "This specific memory address corresponds to the key 'Strength' in my JSON."
+* **The Workflow**: You keep your C++ structs structured with explicit members like `int Strength;`. The mapping layer translates the JSON into the struct at startup.
+* **The "Convenience"**: You have strong, type-safe C++ objects. You can use dot-notation (e.g., `stats.Strength`) throughout your code, and the compiler will catch typos at build time.
+* **The Drawback**: If you want to add an attribute like "Dexterity," you **must** update the `CharacterStats` struct definition in C++, update your registration/mapping table, and recompile. It is "data-driven" for the *values*, but "code-driven" for the *schema*.
 
 ---
 
 ### 2. The Property Bag: The "Flexible Container"
 
-The "Property Bag" (or Dictionary-based approach) is a design pattern where you remove the hard-coded structure entirely in favor of a dynamic collection.
+The "Property Bag" (or Map-based approach) is a design pattern where you remove the hard-coded structure entirely in favor of a dynamic collection. This works identically in C++ as it does in other languages.
 
-* **How it works**: You treat your character as a box that contains a `Dictionary<string, float>`. You don't ask for `stats.Strength`; you ask for `stats.Attributes["Strength"]`.
-* **The Workflow**: The engine doesn't need to know what a "Strength" attribute is. If the JSON says it exists, it gets added to the Dictionary. Your code never needs to be updated to support new stats because it never explicitly mentions them by name.
+* **How it works**: You treat your character as a box that contains a `std::unordered_map<std::string, float>`. You don't ask for `stats.Strength`; you ask for `stats.Attributes["Strength"]`.
+* **The Workflow**: The engine doesn't need to know what a "Strength" attribute is. If the JSON says it exists, it gets added to the map. Your code never needs to be updated to support new stats because it never explicitly mentions them by name.
 * **The "Convenience"**: You have total schema flexibility. You can add "ElfRace," "Dexterity," "Sanity," or "MagicResist" to your JSON files, and the code will handle them immediately without any changes.
 * **The Drawback**: You lose the "dot-notation" safety. If you type `stats.Attributes["Strenth"]` (a typo) in your logic, the compiler won't complain. It will simply fail to find the key and return a default value (like 0) at runtime.
 
@@ -218,86 +219,88 @@ The "Property Bag" (or Dictionary-based approach) is a design pattern where you 
 
 ### Key Comparison
 
-| Feature | Reflection | Property Bag |
+| Feature | Data Mapping (The C++ Reflection Proxy) | Property Bag |
 | --- | --- | --- |
-| **New Attribute** | Requires C# code change | Zero code change |
-| **Compile-time Safety** | High (Compiler checks names) | Low (Dictionary keys are strings) |
-| **Performance** | Fast (with caching) | Very Fast (O(1) Dictionary lookup) |
-| **Primary Goal** | Keeping existing classes "clean" | Achieving maximum data flexibility |
+| **New Attribute** | Requires C++ code/table change | Zero code change |
+| **Compile-time Safety** | High (Compiler checks members) | Low (Map keys are strings) |
+| **Performance** | Fastest (Direct memory access) | Very Fast (O(1) Hash Map lookup) |
+| **Primary Goal** | Keeping existing structs "clean" | Achieving maximum data flexibility |
 
 ### Which should you choose?
 
-* **Choose Reflection** if you want your code to remain standard and readable, and you don't mind recompiling when you introduce a major new core stat that the whole game needs to know about (e.g., a new primary attribute like "Constitution").
-* **Choose Property Bag** if your game is highly modular or moddable. If you want a designer to be able to add "Weight," "Temperature," or "Stamina" to the game via JSON without ever asking you to open the C# source code, the **Property Bag** is the professional standard for that level of flexibility.
+* **Choose Data Mapping** if you want your code to remain standard and readable, and you don't mind recompiling when you introduce a major new core stat that the whole game needs to know about (e.g., a new primary attribute like "Constitution").
+* **Choose Property Bag** if your game is highly modular or moddable. If you want a designer to be able to add "Weight," "Temperature," or "Stamina" to the game via JSON without ever asking you to open the C++ source code, the **Property Bag** is the professional standard for that level of flexibility.
 
 * * *
 
-# Compilation vs Pre-Compilation
+# Compilation vs Pre-Compilation (C++)
 
 If your priority is **blazing execution speed** and you are perfectly fine with recompiling the code when you add new attributes, you have the opportunity to move from "Dynamic Runtime Resolution" to **"Code Generation"**.
 
-Since you have all your formulas in JSON, you can stop using Reflection entirely and generate C# code that the compiler turns into raw machine instructions.
+Since you have all your formulas in JSON, you can stop using dynamic maps entirely and generate C++ code that the compiler turns into raw machine instructions.
 
-### The "Blazing Speed" Strategy: Source Generators
+### The "Blazing Speed" Strategy: Metaprogramming & Pre-Build Steps
 
-Instead of parsing JSON at runtime and using Reflection to look up `CharacterStats` fields, you can use a **C# Source Generator**.
+Instead of parsing JSON at runtime and using Map/Dictionary lookups to look up `CharacterStats` fields, you can use a **Pre-Build Script** (e.g., a Python script or a dedicated C++ tool).
 
-1. **The Source Generator** runs when you compile the project (`dotnet build`).
+1. **The Pre-Build Tool** runs before you compile the project.
 2. It reads your `combat_formulas.json` file.
-3. It **writes a new C# file** in the background that looks like this:
+3. It **writes a new C++ header/source file** in the background that looks like this:
 
-```csharp
-// This file is auto-generated at compile-time!
-public static class CompiledFormulas
+```cpp
+// This file is auto-generated at build-time!
+struct CompiledFormulas
 {
-    public static float MeleeStrike(CharacterStats stats) 
+    static float MeleeStrike(const CharacterStats& stats) 
     {
-        // This is pure, hard-coded, blazing fast C#
+        // This is pure, hard-coded, blazing fast C++
         return stats.BaseWeaponDamage + stats.WeaponBonus + 
                (stats.Strength * 1.5f) + (stats.GearStrengthBonus * 1.5f);
     }
-}
+};
 
 ```
 
-### Why this beats Reflection + Caching
+### Why this beats Map-based lookups
 
-* **Zero Overhead**: There is no dictionary lookup, no `FieldInfo` dereferencing, and no boxing. It is just `stats.Strength`, which the CPU can execute in a single clock cycle .
-* **Type Safety**: If you rename `Strength` to `Str` in your class but forget to update the JSON, the compiler will fail at build time. You will catch the error *before* the game even launches.
-* **Inlining**: The C# compiler can "inline" this code directly into your main loop, meaning the function call overhead disappears entirely.
+* **Zero Overhead**: There is no hash map lookup, no string comparison, and no branching. It is just a direct memory offset access, which the CPU can execute in a single clock cycle.
+* **Type Safety**: If you rename `Strength` to `Str` in your struct but forget to update the JSON-to-Code generator, the compiler will fail at build time. You will catch the error *before* the game even launches.
+* **Inlining**: The C++ compiler can "inline" this code directly into your main loop, meaning the function call overhead disappears entirely.
 
 ### How to achieve your "One Source of Truth"
 
 1. **JSON as the "Source of Truth"**: Keep your `combat_formulas.json`. It stays as your human-readable config.
-2. **Compile-Time Processing**: Use a tool (or a small pre-build script) to transform that JSON into C# code.
-3. **Fast Execution**: Your game engine uses the compiled code.
+2. **Build-Time Processing**: Use a tool (or a small pre-build script) to transform that JSON into C++ code.
+3. **Fast Execution**: Your game engine includes and uses the generated code.
 
 ### Should you do this?
 
-If you are worried about the "cost" of the Dictionary/Reflection approach, this is the **ultimate "Pro" architecture**. It is how high-end game engines (like Unreal or custom AAA engines) handle data-driven systems. They take human-readable data and "bake" it into binary data or generated code during the asset cook/build process.
+If you are worried about the "cost" of the Map/Data-Mapping approach, this is the **ultimate "Pro" architecture**. It is how high-end game engines (like Unreal or custom AAA engines) handle data-driven systems. They take human-readable data and "bake" it into binary data or generated code during the asset cook/build process.
 
 **Summary for your goals:**
 
-* **Reflection-Caching (Current approach)**: 99% fast. Very easy to implement.
+* **Data-Mapping (Current approach)**: 99% fast. Very easy to implement.
 * **Code Generation (Next level)**: 100% fast (identical to hard-coding). Takes more initial work to set up the generator.
 
-If your game is not currently lagging, stick with the **Reflection-Caching** you have now. It already gives you the "one source of truth" (JSON) and "blazing speed" (cached access). Only move to Code Generation if you find that the few nanoseconds lost in Dictionary lookups are causing a performance bottleneck in your hot loop.
-
-Does knowing that you are currently at "99% speed" make you feel better about staying with the current approach, or does the idea of "100% speed" via code generation appeal to your need for perfection?
+If your game is not currently lagging, stick with the **Data-Mapping** you have now. It already gives you the "one source of truth" (JSON) and "blazing speed" (direct memory access). Only move to Code Generation if you find that the few nanoseconds lost in map lookups are causing a performance bottleneck in your hot loop.
 
 ### Layered Architecture
 
 You have built a system that uses **multiple patterns at different levels**. Here is your current stack:
 
-1. **Bottom Layer (Memory Layout): Contiguous Arrays**
-    * *Why?* To give the CPU cache-friendly data.
-    * *Status:* You are using arrays internally within your Registries.
+1. **Bottom Layer (Memory Layout): Contiguous Arrays/POD Structs**
+* *Why?* To give the CPU cache-friendly data.
+* *Status:* You are using arrays internally within your Registries.
+
+
 2. **Middle Layer (Management): Registry Pattern (ECS style)**
-    * *Why?* To abstract the array indices and handle lifecycle management (add/remove entities).
-    * *Status:* This is your `EntityRegistry` and `MetadataRegistry`.
+* *Why?* To abstract the array indices and handle lifecycle management (add/remove entities).
+* *Status:* This is your `EntityRegistry` and `MetadataRegistry`.
+
+
 3. **Top Layer (Communication): Adapter/DTO Pattern**
-    * *Why?* To decouple your high-performance memory layout from your UI.
-    * *Status:* This is your `CharacterViewAdapter` and `CharacterSheetDto`.
+* *Why?* To decouple your high-performance memory layout from your UI.
+* *Status:* This is your `CharacterViewAdapter` and `CharacterSheetDto`.
 
 * * *
 
@@ -314,7 +317,6 @@ Here is the assessment of your current architecture and the best path forward to
 Currently, you have a split:
 
 * **Initialization** is strictly data-driven via `FormulaProcessor`.
-* **Combat Modifiers** (equipment/items) are currently "hard-coded" in `EntityRegistry.cs` using loops.
 
 Moving the modifier logic into `FormulaProcessor` is the "pure" DOD way, but it introduces a **performance vs. complexity trade-off**.
 
@@ -399,8 +401,8 @@ You are currently handling your gear exactly as you should for a high-performanc
 
 Below is a list of the files involved in each calculation:
 
-**Base Stat Generation:** `FormulaProcessor.cs`, `formulas.json`, `StatsUpdateSystem.cs`, `EntityRegistry.cs`
+**Base Stat Generation:** `FormulaProcessor.hpp`, `formulas.json`, `StatsUpdateSystem.hpp`, `EntityRegistry.hpp`
 
-**Advanced Skill/Combat Scaling:** `FormulaProcessor.cs`, `formulas.json`
+**Advanced Skill/Combat Scaling:** `FormulaProcessor.hpp`, `formulas.json`
 
-**Simple Additive Modifiers:** `EntityRegistry.cs`, `EquipmentSystem.cs`
+**Simple Additive Modifiers:** `EntityRegistry.hpp`, `EquipmentSystem.hpp`
