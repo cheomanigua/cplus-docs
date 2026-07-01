@@ -1,8 +1,8 @@
-# DoD Performance
+# C++ Performance
 
 # High-Performance Data Structure Guide
 
-In high-performance C# (e.g., game engines, ECS), we categorize data based on how it interacts with memory and the Garbage Collector (GC).
+In high-performance C++ (e.g., game engines, ECS), we categorize data based on how it interacts with memory and the hardware cache.
 
 To integrate the **Command Queue** concept into your "Key Concepts" guide, you should define it as the transactional mechanism that protects these packed memory structures from concurrent access.
 
@@ -10,45 +10,46 @@ Here is the updated section:
 
 ## 1. Key Concepts Explained
 
-### Packed and Blittable
+### Packed and Trivial
 
-* **Blittable:** A type is "blittable" if it has the same representation in both managed (C# heap) and unmanaged (raw RAM) memory. Examples include `int`, `float`, `byte`, and structs composed entirely of these types. Because they don't require conversion, they can be copied to memory instantly.
+* **Trivial:** A type is "trivial" if it can be copied by simply copying its memory (via `std::memcpy`). This includes scalars like `int`, `float`, `char` and `struct`s composed entirely of trivial types. Because they don't require non-trivial constructors/destructors, they can be copied to memory instantly.
 * **Packed:** This refers to the physical memory layout. A struct is "packed" when its fields are placed side-by-side without "padding" (empty bytes the compiler usually adds to align data for the CPU).
 
 ### Fixed-Size Memory Blocks
 
-These are arrays declared within a struct using the `fixed` keyword (e.g., `public fixed int Stats[10];`).
+These are arrays declared within a struct (e.g., `int Stats[10];`).
 
-* **Theory:** Normally, an array is a reference to an object on the heap. A `fixed` buffer is **inlined** directly into the struct’s memory.
-* **Performance:** This eliminates a pointer dereference and improves cache locality, as the data exists exactly where the struct exists in memory.
+* **Theory:** In C++, standard arrays are naturally inlined into the struct’s memory footprint, unlike C# references.
+* **Performance:** This eliminates pointer indirection and improves cache locality, as the data exists exactly where the struct exists in memory.
 
-### Managed Types
+### Heap-Allocated Types
 
-These are types that the .NET Garbage Collector (GC) must track.
+These are types that require the OS memory allocator (e.g., `new`, `std::malloc`).
 
-* **Examples:** `string`, `class`, `List<T>`, `object`.
-* **Implication:** Because the GC needs to know where these are, you cannot put them in a memory-aligned "packed" struct or an `unsafe` block, as their location in memory might change (when the GC moves objects).
+* **Examples:** `std::string`, `std::vector<T>`, `std::unique_ptr<T>`.
+* **Implication:** Because these involve dynamic memory management, you cannot put them in a contiguous "packed" struct if you want the struct to be trivially copyable, as they contain pointers to the heap that would be invalidated by a simple bitwise copy.
 
 ### Transactional Intent (Command Queue)
 
-* **The Concept:** A sequential buffer of transactional "intent" objects that decouples the *request* for a state change from its *execution*.
+* **The Concept:** A sequential buffer of transactional "intent" structs that decouples the *request* for a state change from its *execution*.
 * **Why it matters for Performance:** In an ECS, you never want logic systems to mutate packed memory buffers directly, as this causes cache thrashing and race conditions. By enqueuing a `GameCommand` struct, you store the *intent* to change data in a cache-friendly queue, allowing the `EngineDriver` to batch these mutations safely during a single, deterministic window in the frame tick.
 
 ### Data Access Patterns
 
-* **Viewports (`Span<T>` / `ReadOnlySpan<T>`):** The primary mechanism for processing "Packed Structs" and "Performance Buffers." They provide safe, high-speed iteration over memory without creating copies or heap allocations.
-* **Direct Access:** Used for "Logic/Metadata" (objects/classes) where the overhead of `Span` is unnecessary or unsupported (e.g., non-blittable types).
-* **Pass-by-Reference (`ref` / `in`):** The optimization layer for method arguments. It ensures that large structs (like your `MovementComponent`) are accessed via memory address rather than being copied onto the stack, preventing hidden performance degradation.
+* **Views (`std::span<T>`):** The primary mechanism (C++20) for processing "Packed Structs" and "Performance Buffers." They provide safe, high-speed iteration over memory without creating copies or heap allocations.
+* **Direct Access:** Used for "Logic/Metadata" (objects/classes) where the overhead of abstraction is unnecessary.
+* **Pass-by-Reference (`const T&` / `T&`):** The optimization layer for method arguments. It ensures that large structs (like your `MovementComponent`) are accessed via memory address rather than being copied onto the stack, preventing hidden performance degradation.
 
 ### Data Categories
 
-* **Logic/Metadata:** Data containing `string`, `class`, or `List`. It is managed and safe. It should not be forced into manual memory layouts.
-* **Packed Structs:** Structs using `LayoutKind.Explicit` or `Sequential` designed for high-density, cache-friendly storage.
-* `[StructLayout(LayoutKind.Sequential)]` ensures fields appear in memory in order.
-* `[StructLayout(LayoutKind.Explicit)]` allows precise control using `[FieldOffset]`.
-* **Performance Buffers:** Structs containing `fixed` buffers used for high-frequency operations (like combat math). These require the `unsafe` keyword.
-* **Command Buffers:** Blittable structs stored in a contiguous `Queue<T>` that act as the single point of entry for state mutation, ensuring all memory modifications remain predictable and deterministic.
+* **Logic/Metadata:** Data containing `std::string`, `std::vector`, or polymorphic classes. It is managed and safe. It should not be forced into manual memory layouts.
+* **Packed Structs:** Structs using `alignas` or `#pragma pack(push, 1)` designed for high-density, cache-friendly storage.
+* `alignas(N)` allows control over alignment boundaries.
+* `#pragma pack(1)` allows precise control to eliminate padding.
+* **Performance Buffers:** Structs containing fixed arrays used for high-frequency operations (like combat math). These are POD (Plain Old Data) types.
+* **Command Buffers:** Trivial structs stored in a contiguous `std::vector<T>` that act as the single point of entry for state mutation, ensuring all memory modifications remain predictable and deterministic.
 
+---
 
 ## 2. Decision Matrix
 
@@ -57,25 +58,23 @@ These are types that the .NET Garbage Collector (GC) must track.
 | Strategy | Semantics | Performance Impact | Usage Goal |
 | --- | --- | --- | --- |
 | **Pass-by-Value** | Copies data to stack | High (for large structs) | Small, simple types (`int`, `float`) |
-| **`in`** | Pass by reference (Read-only) | Low (no copy) | Large immutable structs |
-| **`ref`** | Pass by reference (Read/Write) | Low (no copy) | Modifying structs in-place |
-| **`Span<T>`** | Ref-struct "View" of memory | Zero-copy/Zero-alloc | Processing array/buffer ranges |
-| **`ReadOnlySpan<T>`** | Read-only "View" of memory | Zero-copy/Zero-alloc | Safe, read-only iteration |
+| **`const T&`** | Pass by reference (Read-only) | Low (no copy) | Large immutable structs |
+| **`T&`** | Pass by reference (Read/Write) | Low (no copy) | Modifying structs in-place |
+| **`std::span<T>`** | View of memory | Zero-copy/Zero-alloc | Processing array/buffer ranges |
+| **`std::span<const T>`** | Read-only "View" of memory | Zero-copy/Zero-alloc | Safe, read-only iteration |
 
 #### How to use them together in your systems
 
-The power of this architecture comes from combining the **View** (`Span`) with the **Access Modifier** (`ref`). This is how you should structure your `MovementSystem` to hit your performance targets for 5,000 entities:
+The power of this architecture comes from combining the **View** (`std::span`) with the **Reference** access. This is how you should structure your `MovementSystem` to hit your performance targets for 5,000 entities:
 
-```csharp
-// Use Span for the collection view, and ref for the individual element access
-public static void Update(Span<MovementComponent> components, float deltaTime)
+```cpp
+// Use std::span for the collection view, and reference for the individual element access
+void Update(std::span<MovementComponent> components, float deltaTime)
 {
-    // 1. Span allows safe, bounds-checked iteration over the buffer
-    for (int i = 0; i < components.Length; i++)
+    // 1. std::span allows safe, bounds-checked iteration over the buffer
+    for (auto& comp : components)
     {
         // 2. 'ref' allows direct, zero-copy access to the component in memory
-        ref var comp = ref components[i]; 
-
         if (!comp.Active) continue;
 
         comp.Transform.Origin += comp.Velocity * comp.Speed * deltaTime;
@@ -86,36 +85,34 @@ public static void Update(Span<MovementComponent> components, float deltaTime)
 
 #### Key distinctions for your Style Guide:
 
-1. **`Span<T>` vs. `in`/`ref`:**
-* Use `Span<T>` as the **argument type** for your system methods (instead of passing raw `T[]` arrays).
-* Use `ref` or `in` as the **access method** *inside* the loop when you are interacting with individual items *within* that span.
+1. **`std::span<T>` vs. `const T&` / `T&`:**
 
+* Use `std::span<T>` as the **argument type** for your system methods (instead of passing raw pointers/sizes).
+* Use `T&` or `const T&` as the **access method** *inside* the loop when you are interacting with individual items *within* that span.
 
-2. **Why `ReadOnlySpan<T>`?**
-* If a system (like your `SpatialGridSystem`) only needs to read positions without ever changing them, **always** use `ReadOnlySpan<T>`. This is a massive "hint" to the compiler that it can optimize memory access for read-only patterns, and it acts as a safeguard against accidental state mutation.
+2. **Why `std::span<const T>`?**
 
+* If a system (like your `SpatialGridSystem`) only needs to read positions without ever changing them, **always** use `std::span<const T>`. This is a massive "hint" to the compiler that it can optimize memory access for read-only patterns, and it acts as a safeguard against accidental state mutation.
 
-
-Integrating these into your matrix defines a complete "High-Performance API" layer for your engine. Does this feel like a sufficient set of rules for your `EngineDriver` to enforce?
+---
 
 ### Data Categories
 
 | Strategy | When to use | Keywords | Safety | Memory Control | Complexity |
 | --- | --- | --- | --- | --- | --- |
-| **Standard (Safe)** | Logic, Metadata, UI | `struct`, `record` | High | Compiler-Managed unordered | Low |
-| **Sequential** | General packing | `LayoutKind.Sequential` | High | Compiler-Managed ordered | Medium |
-| **Explicit (Packed)** | Blittable / Tightly packed structs | `LayoutKind.Explicit`, `[FieldOffset]` | High | Manual Offsets `[FieldOffset]` | Medium |
-| **Unsafe (Fixed)** | Performance Buffers/Pointers | `unsafe`, `fixed` | Low (Manual) | Manual Memory | High |
-| **Command Queue** | Transactional State Changes | `Queue<T>`, `struct` | High | Transactional | Low |
+| **Standard (Safe)** | Logic, Metadata, UI | `struct`, `class` | High | Compiler-Managed | Low |
+| **Aligned** | General packing | `alignas(N)` | High | Compiler-Managed | Medium |
+| **Packed** | Tightly packed structs | `#pragma pack(1)` | High | Manual Packing | Medium |
+| **POD (Fixed)** | Performance Buffers | Plain Old Data | Low (Manual) | Manual Memory | High |
+| **Command Queue** | Transactional State Changes | `std::vector<T>` | High | Transactional | Low |
 
 ### Why the Command Queue is different:
 
-Unlike the memory-layout strategies (Sequential, Explicit, Unsafe) which focus on **how data is stored**, the **Command Queue** focuses on **how data is modified**. It provides a "Gatekeeper" pattern where:
+Unlike memory-layout strategies which focus on **how data is stored**, the **Command Queue** focuses on **how data is modified**. It provides a "Gatekeeper" pattern where:
 
-1. **Systems** enqueue *intent* as lightweight, blittable structs.
+1. **Systems** enqueue *intent* as lightweight, trivial structs.
 2. The **EngineDriver** processes these structs sequentially as a batch transaction.
 3. **Performance** remains high because the mutation occurs in a single, predictable loop, preventing cache invalidation and race conditions during your high-speed system sweeps.
-
 
 ## 3. Implementation Patterns
 
@@ -123,178 +120,152 @@ Unlike the memory-layout strategies (Sequential, Explicit, Unsafe) which focus o
 
 Use this for non-performance-critical data.
 
-```csharp
-public struct MetadataComponent {
-    public string Name; // Managed type
-    public string WeaponName;
-    public float Value;
-}
+```cpp
+struct MetadataComponent {
+    std::string Name; // Dynamic type
+    std::string WeaponName;
+    float Value;
+};
 
 ```
 
 ### Pattern 2: The "Sequential" Struct
 
-Use this for standard performance needs. It guarantees the field order, but allows the compiler to handle padding/alignment for optimal CPU access.
+Use this for standard performance needs. It maintains a defined order, usually with standard padding.
 
-```csharp
-[StructLayout(LayoutKind.Sequential, Pack = 4)]
-public struct StatsComponent {
-    public int Strength;
-    public int Intelligence;
-    public int Agility;
-}
+```cpp
+struct StatsComponent {
+    int Strength;
+    int Intelligence;
+    int Agility;
+};
 
 ```
 
 ### Pattern 3: The "Explicitly Packed" Struct
 
-Use this when you have only blittable types (ints/floats) and want to guarantee a specific size for performance.
+Use this when you want to minimize the footprint of trivial types.
 
-```csharp
-[StructLayout(LayoutKind.Explicit, Size = 12)]
-public struct WeaponComponent {
-    [FieldOffset(0)] public int EntityId;
-    [FieldOffset(4)] public int WeaponId;
-    [FieldOffset(8)] public int Damage;
-}
+```cpp
+#pragma pack(push, 1)
+struct WeaponComponent {
+    int32_t EntityId;
+    int32_t WeaponId;
+    int32_t Damage;
+};
+#pragma pack(pop)
 
 ```
 
-### Pattern 4: The "Unsafe Performance Buffer"
+### Pattern 4: The "Performance Buffer"
 
 Use this only when you need inlined arrays for extreme speed.
 
-```csharp
-public unsafe struct EntityStats {
-    public int EntityId;
-    public fixed int Stats[10]; // Inlined memory
-}
+```cpp
+struct EntityStats {
+    int32_t EntityId;
+    int32_t Stats[10]; // Inlined memory
+};
 
 ```
 
 ### Pattern 5: The "Transactional Intent" (Command Queue)
 
-Use this to decouple systems that *request* a state change from the systems that *process* it. By defining intents as simple, blittable structs, you can safely queue them to be processed by the engine’s `Tick` logic, ensuring thread safety and deterministic order without heap allocations.
+Use this to decouple systems that *request* a state change from the systems that *process* it.
 
-```csharp
-// Define the intent as a lightweight, blittable struct
-public enum CommandType { EquipItem, AdjustHealth, SpawnEntity }
+```cpp
+enum class CommandType { EquipItem, AdjustHealth, SpawnEntity };
 
-[StructLayout(LayoutKind.Sequential)]
-public struct GameCommand {
-    public CommandType Type;
-    public int EntityId;
-    public int Value;
-}
+struct GameCommand {
+    CommandType Type;
+    int32_t EntityId;
+    int32_t Value;
+};
 
 // In the EngineDriver, process these transactions as a batch
-public class CommandQueue {
-    private readonly Queue<GameCommand> _queue = new();
+class CommandQueue {
+private:
+    std::vector<GameCommand> _queue;
     
-    public void Enqueue(GameCommand cmd) => _queue.Enqueue(cmd);
-    public bool HasCommands => _queue.Count > 0;
-    public GameCommand Dequeue() => _queue.Dequeue();
-}
+public:
+    void Enqueue(GameCommand cmd) { _queue.push_back(cmd); }
+    bool HasCommands() const { return !_queue.empty(); }
+    GameCommand Dequeue() { 
+        GameCommand cmd = _queue.back();
+        _queue.pop_back();
+        return cmd; 
+    }
+};
 
 ```
 
 #### Why this pattern is essential for performance
 
-Unlike the other patterns that focus on **how memory is packed for reading**, the **Command Queue** pattern focuses on **how memory is modified for safety**.
+* **Prevents Race Conditions:** By queueing intents, you ensure that no system is writing to `EntityStats` while another system is midway through a `std::span` sweep.
+* **Batch Consistency:** All mutations are executed in a single, predictable loop. This keeps the CPU cache consistent.
+* **Deterministic Replay:** Because your commands are serialized in a queue, you can log every `GameCommand` to a file.
 
-* **Prevents Race Conditions:** By queueing intents, you ensure that no system is writing to `EntityStats` while another system is midway through a `Span<T>` sweep.
-* **Batch Consistency:** All mutations are executed in a single, predictable loop during the `EngineDriver.Tick()`. This keeps the CPU cache consistent because the memory state only changes during a specific, known window of time.
-* **Deterministic Replay:** Because your commands are now serialized in a queue, you can log every `GameCommand` to a file. This allows you to recreate any game state or debug complex combat interactions simply by "replaying" the command sequence.
+## 4. Memory Management
 
-## 4. Garbage Collection
+To understand which strategies involve heap overhead, it is helpful to look at whether the memory is "Stack/Static" or "Heap" (handled by `malloc`/`new`).
 
-To understand which strategies use Garbage Collection (GC), it is helpful to look at whether the memory is "Managed" (handled by the CLR) or "Unmanaged" (handled by you).
+### Memory Management and Your Data Layouts
 
-### Garbage Collection and Your Data Layouts
-
-| Strategy | Uses Garbage Collection? | Explanation |
+| Strategy | Uses Heap Allocation? | Explanation |
 | --- | --- | --- |
-| **Standard (Safe)** | **Yes** | Uses managed types (like `string` or `List`) that the GC must track and clean up. |
-| **Sequential** | **Generally No** | GC ignores contents if types are blittable. |
-| **Explicit (Packed)** | **No** | Treated as raw memory blocks. |
-| **Unsafe (Fixed)** | **No** | Memory is managed manually. |
-| **Command Queue** | **No** | Uses blittable structs; zero heap allocation during execution. |
+| **Standard (Safe)** | **Yes** | Uses containers (like `std::string` or `std::vector`) that allocate on the heap. |
+| **Sequential** | **No** | Stack or buffer allocated. |
+| **Packed** | **No** | Contiguous raw memory. |
+| **POD (Fixed)** | **No** | Memory is contiguous/inlined. |
+| **Command Queue** | **Rarely** | Pre-reserved `std::vector` capacity results in zero allocation during runtime. |
 
 ### Detailed Breakdown
 
-#### 1. Standard (Safe) — **Uses GC**
+#### 1. Standard (Safe) — **Uses Heap**
 
-Whenever you include a `string`, `List<T>`, or `class` inside a struct or record, that struct is considered **"Managed."** * The Garbage Collector must traverse these objects to see if they are still being referenced by your code. If the GC is running, it "sees" these objects and may move them around in memory.
+Whenever you include `std::string` or `std::vector` inside a struct, that struct owns dynamic memory. The CPU must perform a pointer dereference to access the actual data, and the memory might be fragmented.
 
-#### 2. Sequential & Explicit (Packed) — **GC-Ignored (if Blittable)**
+#### 2. Sequential & Packed — **POD (Plain Old Data)**
 
-If your struct contains *only* blittable types (types that don't need translation, like `int`, `long`, `float`, or other blittable structs), it is considered **"Blittable."**
+If your struct contains *only* trivial types, it is considered POD.
 
-* The GC is essentially "blind" to the internal contents of these structs. Even if the GC runs, it does not need to look inside the struct to track object references.
-* This is why these patterns are so efficient for high-performance ECS systems—they reduce the amount of work the GC has to perform during its "Mark and Sweep" cycles.
+* These are perfectly contiguous. There is no heap pointer to dereference.
+* This is why these patterns are efficient—they maximize cache line utilization during "Mark and Sweep" style iterations.
 
-#### 3. Unsafe (Fixed) — **GC-Ignored**
+#### 3. Command Queue — **Pre-allocated**
 
-When you use `unsafe` and `fixed` buffers (like in your `EntityStats`), you are explicitly taking responsibility for that memory.
+By using `std::vector::reserve()`, you can ensure that enqueuing operations create **zero dynamic memory allocations** during execution.
 
-* The GC does not track the content of `fixed` arrays.
-* **Critical Warning:** Because the GC is not tracking this, you must ensure that your `unsafe` code does not access memory that has been deallocated or is being reused. You are essentially stepping outside the "safety net" that the GC provides.
-
-#### 4. Command Queue — **GC-Ignored (if Blittable)**
-
-By defining your `GameCommand` as a `struct` consisting only of blittable types (e.g., `enum`, `int`), you ensure that enqueuing and dequeuing operations create **zero garbage**.
-
-* **Performance:** Because the queue stores structs contiguously, the CPU can iterate through pending commands without triggering cache misses or forcing the GC to perform "Mark and Sweep" cycles on the intent list.
-* **Why it matters:** In a high-performance ECS, you want your state mutations to be as "silent" to the GC as your component updates. Using a struct-based `CommandQueue` ensures that even during high-frequency combat or intense state changes, the memory footprint remains perfectly flat and predictable.
-
-### Why this matters for your ECS
-
-Your current architecture for `EntityStats` and `WeaponComponent` is **GC-friendly**. By keeping these structs packed and blittable (or using `unsafe` for buffers), you are preventing the GC from having to check thousands of individual components every frame. This is the single biggest performance win for an ECS with 5,000+ NPCs.
-
-**In summary:** If your struct contains `string` or `class`, the GC is involved. If your struct is made of `int`, `float`, `bool`, or `fixed` arrays, you have successfully moved that data into a layout where the GC has little to no work to do.
-
+* **Performance:** Because the queue stores structs contiguously, the CPU can iterate through pending commands without triggering cache misses.
 
 ## 5. Summary Theory
 
-* **Why `LayoutKind.Explicit`?** It tells the compiler to stop guessing alignment. It is great for ensuring a struct occupies exactly as much memory as its data requires.
-* **Why `unsafe`?** It is an "opt-in" for direct memory access. It is not about "bad" code; it is about taking control away from the GC. When you use `fixed` or pointers, you are effectively acting as your own memory manager.
-* **The "Managed" Constraint:** You cannot use `FieldOffset` or `unsafe` with managed types (`string`/`class`) because the GC needs to move them around. If you force an `Explicit` layout on a `string`, you will corrupt memory and crash the application.
+* **Why `#pragma pack`?** It tells the compiler to stop inserting padding. It is great for ensuring a struct occupies exactly as much memory as its data requires.
+* **Why C++?** It provides explicit control over memory layout without needing the `unsafe` keyword required in other managed languages.
+* **The "Managed" Constraint:** While C++ does not have a GC, using heap-based objects (`std::shared_ptr`, `std::string`) carries "bookkeeping" overhead.
 
-**Design Rule:** Always build your logic with **Safe Structs** first. Only escalate to **Explicit Layout** or **Unsafe Fixed Buffers** when you have measured a performance bottleneck and proven that better memory alignment or cache locality is required.
+**Design Rule:** Always build your logic with **Safe Structs** first. Only escalate to **Packed Layouts** or **Fixed Buffers** when you have measured a performance bottleneck and proven that better memory alignment or cache locality is required.
 
-
-* * *
-
+---
 
 # Performance Analysis
 
-Even when shifting focus entirely toward flexibility, maintainability, and text-file composition (`JSON`), this architecture handles 5,000 entities seamlessly. It is specifically designed to bypass the two massive bottlenecks that typically cripple traditional engines: **Memory Indirection Loops** (caused by pointer-chasing and heap-allocated objects) and **Algorithmic Cascades** (caused by O(N²) proximity checks and per-entity script overhead).
-
-Here is how the concepts we established—**blittable structs, cache-friendly sieves, and arithmetic tokenization**—make handling 5,000 entities trivial.
-
 #### 1. Simple Stream Operations: Movement and Attacks (O(N))
 
-* **The Flexibility:** Behaviors are defined via data-driven tags in `npcs.json`.
-* **The Execution:** By utilizing **Structure of Arrays (SoA)** patterns in our `EntitySieve`, we avoid loading unnecessary metadata into the CPU cache. The `MovementSystem` performs linear, contiguous sweeps across component arrays. Because these are packed, blittable types, the CPU pre-fetcher can pull data into L1 cache with near-zero latency, processing 5,000 entities in **under 0.05ms**.
+* **The Execution:** By utilizing **Structure of Arrays (SoA)** patterns in our `EntitySieve`, we avoid loading unnecessary metadata into the CPU cache. The `MovementSystem` performs linear, contiguous sweeps across component arrays. The CPU pre-fetcher can pull data into L1 cache with near-zero latency, processing 5,000 entities in **under 0.05ms**.
 
 #### 2. The Filter Advantage: Sparse Index Caching (O(K))
 
-When implementing status effects like "Frozen," we avoid the "Naive Engine" trap of iterating all 5,000 entities to check for a status flag.
-
-* **The Execution:** We utilize the **Entity Sieve** to maintain a packed, contiguous array of only those `EntityIds` currently affected by the status. The system processes only the active `K` entities (e.g., 40 frozen units), skipping the other 4,960 without executing a single conditional branch.
+* **The Execution:** We utilize the **Entity Sieve** to maintain a packed, contiguous array of only those `EntityIds` currently affected by a status. The system processes only the active `K` entities, skipping the others without executing a single conditional branch.
 
 #### 3. Dynamic Combat Math: Tokenized Arithmetic
 
-To keep balance formulas flexible via JSON, we avoid string-parsing at runtime, which would be prohibitively slow.
-
-* **The Execution:** At bootstrap, your engine parses combat formulas (e.g., `"BaseDamage + (Str * 1.5)"`) into an **Arithmetic Execution Tree**. During the simulation tick, the `FormulaProcessor` performs direct memory lookups against our `EntityStats` pools, feeding raw values into pre-compiled math trees, allowing for high-frequency combat calculations without string overhead.
+* **The Execution:** At bootstrap, your engine parses combat formulas into an **Arithmetic Execution Tree**. During the simulation tick, the `FormulaProcessor` performs direct memory lookups against our `EntityStats` pools, feeding raw values into pre-compiled math trees.
 
 #### 4. Spatial Grid Matrix & Structural Command Buffers
 
-We prevent frame spikes during pathfinding and target scanning using two architectural buffers:
-
-* **Spatial Grid Matrix:** Instead of O(N²) target scanning, entities register their coordinates into a lightweight grid map. Scans are limited to immediate grid neighbors, reducing complexity to nearly O(1) per scan.
-* **Command Buffer (Time-Slicing):** Heavy operations like long-range A* pathfinding are pushed into a `Structural Command Buffer`. The engine slices these operations, capping their execution time per frame (e.g., 2ms) to ensure the simulation loop remains consistent regardless of total pathfinding demand.
+* **Spatial Grid Matrix:** Instead of O(N²) target scanning, entities register their coordinates into a lightweight grid map.
+* **Command Buffer (Time-Slicing):** Heavy operations are pushed into a `Structural Command Buffer`. The engine slices these operations, capping their execution time per frame.
 
 ---
 
@@ -307,24 +278,11 @@ We prevent frame spikes during pathfinding and target scanning using two archite
 | **3. Proximity Target Scanning** | O(N log N) | ~0.50 ms | Neighborhood-based grid lookup |
 | **4. Combat Formula Eval** | O(K) | ~0.30 ms | Tokenized mathematical trees |
 | **5. Time-Sliced Pathfinding** | Constant | ~2.00 ms | Command Buffer queue management |
-| **6. Linear Physics/Movement** | O(N) | ~0.05 ms | Blittable struct stream processing |
+| **6. Linear Physics/Movement** | O(N) | ~0.05 ms | Trivial struct stream processing |
 | **7. Deferred Lifecycle Flush** | O(C) | ~0.15 ms | Array-based state synchronization |
 | **Total Simulation Cost** | — | **~3.27 ms** | **Uses <10% of a 33.33ms (30Hz) frame.** |
 
-<br>
-
-### Architectural Roadmap: Moving Toward Production-Ready ECS
-
-The current implementation uses Array-of-Structs (AoS) pattern. While it leverages `[StructLayout(LayoutKind.Explicit)]`, `Span<T>`, and `unsafe` buffers to achieve high performance, the following shifts will move you from "fast" to "ECS-native" scale:
-
-1. **Transition to SoA (Structure of Arrays):** Instead of storing chunky structs in one array, split `CharacterStats` into individual component arrays. This prevents loading unused fields (like `Mana`) when the CPU only needs to process `Health`.
-2. **Eliminate Search Logic:** Replace linear searches in `EntityRegistry` with direct indexing using `EntityId`. In an ideal ECS, `EntityId` *is* the index into all component pools.
-3. **Replace Dictionaries with Arrays:** Move metadata (names/weapons) from `Dictionary<int, string>` to direct-indexed `string[]`. This replaces expensive hash-map lookups with O(1) memory address calculations.
-4. **Bitmasking for Existence:** Replace `bool[]` existence arrays in `EntitySieve` with `BitArray` or `long[]` bitmasks. This dramatically increases cache density by reducing the memory footprint of status checks to 1 bit per entity.
-
-By shifting from an **Array-of-Structs (AoS)** model to a **Structure-of-Arrays (SoA)** model and eliminating dictionary lookups, you will achieve an engine architecture that is not only highly flexible for JSON-based design but capable of scaling to tens of thousands of entities.
-
-* * *
+---
 
 # AoS vs SoA
 
@@ -338,8 +296,8 @@ Here is the breakdown of why we started with AoS and why SoA is the "next level"
 
 When you move from `class` objects to `struct` arrays, you achieve the biggest performance gains immediately:
 
-* **GC Pressure:** Dropping from thousands of individual objects to contiguous memory arrays (AoS) eliminates almost all GC thrashing.
-* **Cache Locality:** Even in AoS, if your structs are "blittable" (like your `WeaponComponent`), they are packed side-by-side. When the CPU loads one `WeaponComponent` into the cache, it often pulls the next 3–4 components into the same cache line automatically.
+* **Memory Management:** Dropping from thousands of individual objects to contiguous memory arrays (AoS) eliminates heap fragmentation and pointer chasing.
+* **Cache Locality:** Even in AoS, if your structs are "POD" (Plain Old Data), they are packed side-by-side. When the CPU loads one `WeaponComponent` into the cache, it often pulls the next 3–4 components into the same cache line automatically.
 
 AoS is **"Good Enough"** for most game logic because it provides the majority of the cache benefits while remaining very easy to read and maintain.
 
@@ -347,134 +305,168 @@ AoS is **"Good Enough"** for most game logic because it provides the majority of
 
 AoS keeps "related data" together in a single conceptual bucket.
 
-* **Ease of Use:** If you want to check an entity's status, you grab one struct: `EntityStats data = registry[id];`. It feels like working with a singular object.
-* **Complexity:** Implementing SoA requires splitting that struct into five different arrays (`int[] healths`, `int[] strengths`, `bool[] isDirtys`, etc.). This adds significant boilerplate code to your `EntityRegistry` and `EntitySieve` because you now have to synchronize the indices of five arrays instead of just one.
+* **Ease of Use:** If you want to check an entity's status, you grab one struct: `EntityStats& data = registry[id];`. It feels like working with a singular object.
+* **Complexity:** Implementing SoA requires splitting that struct into five different arrays (`std::vector<int> healths`, `std::vector<int> strengths`, `std::vector<bool> isDirtys`, etc.). This adds significant boilerplate code to your `EntityRegistry` because you now have to synchronize the indices of five arrays instead of just one.
 
-In AoS, you bundle fields into a single `MovementComponent` struct and store them in one continuous array (e.g., `MovementComponent[]`).
+In AoS, you bundle fields into a single `MovementComponent` struct and store them in one continuous `std::vector` (e.g., `std::vector<MovementComponent>`).
 
 * **The Advantage (Maintainability & "Bulk" Processing):** When `MovementSystem` needs to calculate a new position, it fetches the entire `MovementComponent` struct in one operation. This is highly efficient for complex movement logic where the CPU needs `Velocity`, `Speed`, `Acceleration`, and `Friction` simultaneously. Because all these fields are bundled together in memory, the CPU can pre-fetch the data for the next entity before the loop even requests it.
 * **The Scalability Limit (Cache Pollution):** If you iterate through 5,000 entities but a specific pass of your `MovementSystem` *only* needs to update the `Transform`, you are still loading the `Acceleration` and `Friction` bytes into the cache anyway. If your struct grows too large (e.g., exceeding 64 bytes), you may inadvertently fetch "garbage" data that displaces other useful information, eventually leading to increased cache misses.
 
-    ```csharp
-    using System.Runtime.InteropServices;
-    using System.Numerics;
-    using Source.Core.Math;
 
-    namespace Source.Engine;
+In C++, we use `alignas` and `pragma pack` for memory control, and `std::span` (C++20) for safe, zero-copy memory access.
 
-    [StructLayout(LayoutKind.Explicit, Size = 32)] // Total size: 32 bytes
-    public struct MovementComponent
-    {
-        [FieldOffset(0)]  public Transform2D Transform; // Transform2D (Assuming 8 bytes for Origin)
-        [FieldOffset(8)]  public Vector2 Velocity; // Vector2 Velocity (8 bytes)
-        [FieldOffset(16)] public Vector2 LastPosition; // Vector2 LastPosition (8 bytes)
-        [FieldOffset(24)] public float Speed; // float Speed (4 bytes)
-        [FieldOffset(28)] public bool Active; // bool Active (1 byte)
-        [FieldOffset(29)] public bool HasLastPosition; // bool HasLastPosition (1 byte)
+**`MovementComponent.h`**
+
+```cpp
+#pragma once
+#include <glm/glm.hpp>
+#include "Transform2D.h"
+
+#pragma pack(push, 1)
+struct MovementComponent {
+    Transform2D Transform;   // 8 bytes
+    glm::vec2 Velocity;      // 8 bytes
+    glm::vec2 LastPosition;  // 8 bytes
+    float Speed;             // 4 bytes
+    bool Active;             // 1 byte
+    bool HasLastPosition;    // 1 byte
+    // Total: 30 bytes (2 bytes padding will be added by compiler to reach 32)
+};
+#pragma pack(pop)
+
+```
+
+**`MovementBuffers.h`**
+
+```cpp
+#pragma once
+#include <vector>
+#include "MovementComponent.h"
+#include "EngineConfig.h"
+
+class MovementBuffers {
+public:
+    std::vector<MovementComponent> Components;
+
+    MovementBuffers() {
+        Components.resize(EngineConfig::MaxEntities);
     }
-    ```
+};
 
-    ```csharp
-    namespace Source.Engine;
+```
 
-    public class MovementBuffers
-    {
-        // The AoS (Array of Structures) buffer
-        public MovementComponent[] Components = new MovementComponent[EngineConfig.MaxEntities];
-    }
-    ```
+**`MovementSystem.h`**
 
-    ```csharp
-    using System;
-    using Source.Engine;
+```cpp
+#pragma once
+#include <span>
+#include "MovementComponent.h"
 
-    namespace Source.Systems.Movement;
+class MovementSystem {
+public:
+    static void Update(std::span<MovementComponent> components, float deltaTime) {
+        for (auto& comp : components) {
+            if (!comp.Active) continue;
 
-    public static class MovementSystem
-    {
-        public static void Update(Span<MovementComponent> components, float deltaTime)
-        {
-            for (int i = 0; i < components.Length; i++)
-            {
-                // Accessing the component by ref allows us to modify the data in-place
-                ref var comp = ref components[i];
-
-                if (!comp.Active)
-                    continue;
-
-                // Simple, readable access to bundled properties
-                comp.Transform.Origin += comp.Velocity * comp.Speed * deltaTime;
-            }
+            comp.Transform.Origin += comp.Velocity * comp.Speed * deltaTime;
         }
     }
-    ```
-    ```csharp
-    // EngineDriver.cs
-    MovementSystem.Update(_moveBuffers.Components, deltaTime);
-    ```
+};
+
+```
+
+**`EngineDriver.cpp` (Usage Example)**
+
+```cpp
+MovementSystem::Update(_moveBuffers.Components, deltaTime);
+
+```
+
 
 ### 3. Structure-of-Arrays (SoA)
 
 SoA becomes the "better" choice only when your systems become highly specialized.
 
 * **The "Partial Data" Problem:** If your `CombatSystem` only needs `Damage` and `Strength`, but your `EntityStats` struct also contains `Mana`, `EquippedItemIds`, and `IsDirty`, your CPU is loading "dead weight" into the cache line.
-* **The SoA Solution:** By using SoA, you split those fields into separate arrays. The `CombatSystem` only loads the `Damage[]` and `Strength[]` arrays. Because there is no "dead weight," you can fit many more entities into a single L1 cache line, which is why SoA is the standard for high-performance ECS libraries (like Unity's DOTS or Flecs).
+* **The SoA Solution:** By using SoA, you split those fields into separate arrays. The `CombatSystem` only loads the `Damage` and `Strength` vectors. Because there is no "dead weight," you can fit many more entities into a single L1 cache line.
 
-In SoA, you store each field in its own continuous array (e.g., `Velocities[]`, `Speeds[]`).
+In SoA, you store each field in its own continuous `std::vector`.
 
-* **The Advantage (Cache Efficiency):** When `MovementSystem` runs, it primarily requires the `Transform2D` and `Velocity` data to update positions. Because your data is partitioned into separate arrays, the CPU loads only the relevant vectors into the cache lines. You avoid "cache pollution" by not loading unused properties (like `LastPositions` or `Active` status) that the `MovementSystem` loop might not need for every iteration.
-* **The Scalability Limit:** As your movement logic becomes more complex (e.g., adding `Friction`, `Acceleration`, or `Gravity` coefficients), your `EngineDriver` must pass an ever-increasing number of individual arrays into the `MovementSystem`. This increases "register pressure" and makes it difficult for the CPU to efficiently manage the dozens of disparate memory pointers required to perform a single update.
+* **The Advantage (Cache Efficiency):** When `MovementSystem` runs, it primarily requires the `Transform2D` and `Velocity` data. Because your data is partitioned into separate vectors, the CPU loads only the relevant vectors into the cache lines. You avoid "cache pollution" by not loading unused properties.
+* **The Scalability Limit:** As your movement logic becomes more complex, your `EngineDriver` must pass an ever-increasing number of individual arrays into the `MovementSystem`. This increases "register pressure" and makes it difficult for the CPU to efficiently manage the dozens of disparate memory pointers.
 
-    ```csharp
-    using Source.Core.Math;
-    using System.Numerics;
+In the SoA pattern, data is decoupled into discrete vectors to maximize cache line utilization during specific system passes.
 
-    namespace Source.Engine;
+**`MovementBuffersSoA.h`**
 
-    public class MovementBuffers
-    {
-        // The SoA (Structure of Arrays) buffers
-        public Transform2D[] Transforms = new Transform2D[EngineConfig.MaxEntities];
-        public Vector2[] Velocities = new Vector2[EngineConfig.MaxEntities];
-        public Vector2[] LastPositions = new Vector2[EngineConfig.MaxEntities];
-        public float[] Speeds = new float[EngineConfig.MaxEntities];
-        public bool[] Active = new bool[EngineConfig.MaxEntities];
-        public bool[] HasLastPosition = new bool[EngineConfig.MaxEntities];
+```cpp
+#pragma once
+#include <vector>
+#include <glm/glm.hpp>
+#include "Transform2D.h"
+#include "EngineConfig.h"
+
+class MovementBuffersSoA {
+public:
+    std::vector<Transform2D> Transforms;
+    std::vector<glm::vec2> Velocities;
+    std::vector<glm::vec2> LastPositions;
+    std::vector<float> Speeds;
+    std::vector<bool> Active;
+    std::vector<bool> HasLastPosition;
+
+    MovementBuffersSoA() {
+        Transforms.resize(EngineConfig::MaxEntities);
+        Velocities.resize(EngineConfig::MaxEntities);
+        LastPositions.resize(EngineConfig::MaxEntities);
+        Speeds.resize(EngineConfig::MaxEntities);
+        Active.resize(EngineConfig::MaxEntities, true);
+        HasLastPosition.resize(EngineConfig::MaxEntities, false);
     }
-    ```
+};
 
-    ```csharp
-    using System;
-    using System.Numerics;
-    using Source.Core.Math;
+```
 
-    namespace Source.Systems.Movement;
+**`MovementSystemSoA.h`**
 
-    public static class MovementSystem
+```cpp
+#pragma once
+#include <span>
+#include <glm/glm.hpp>
+#include "Transform2D.h"
+
+class MovementSystemSoA {
+public:
+    static void Update(
+        std::span<Transform2D> transforms,
+        std::span<glm::vec2> velocities,
+        std::span<float> speeds,
+        std::span<const bool> activeMask,
+        float deltaTime) 
     {
-        public static void Update(
-            Span<Transform2D> transforms,
-            Span<Vector2> velocities,
-            Span<float> speeds,
-            ReadOnlySpan<bool> activeMask,
-            float deltaTime)
-        {
-            // Move everybody
-            for (int i = 0; i < transforms.Length; i++)
-            {
-                if (!activeMask[i])
-                    continue;
+        for (size_t i = 0; i < transforms.size(); ++i) {
+            if (!activeMask[i]) continue;
 
-                transforms[i].Origin += velocities[i] * speeds[i] * deltaTime;
-            }
+            transforms[i].Origin += velocities[i] * speeds[i] * deltaTime;
         }
     }
-    ```
+};
 
-    ```csharp
-    // EngineDriver.cs
-    MovementSystem.Update(_moveBuffers.Transforms, _moveBuffers.Velocities, _moveBuffers.Speeds, _moveBuffers.Active, deltaTime);
-    ```
+```
+
+**`EngineDriver.cpp` (Usage Example)**
+
+```cpp
+MovementSystemSoA::Update(
+    _moveBuffersSoA.Transforms, 
+    _moveBuffersSoA.Velocities, 
+    _moveBuffersSoA.Speeds, 
+    _moveBuffersSoA.Active, 
+    deltaTime
+);
+
+```
 
 ### Performance Comparison Table (5,000 Entities)
 
@@ -492,15 +484,10 @@ Not at all. You have successfully implemented a **Data-Oriented** architecture b
 * **Think of AoS as "DOD-Lite":** It gets you 90% of the performance gains of a professional engine with 10% of the architectural complexity.
 * **Think of SoA as "DOD-Pro":** It is the optimization you pull out when you have reached your entity limit and need to squeeze out that final 10% of performance.
 
-**My recommendation:** Stay with your current AoS implementation while you build your features. Only refactor to SoA if you find that a specific system (like the Combat Processor) is causing a cache-miss bottleneck that prevents you from reaching your entity count goals.
+**My recommendation:** Stay with your current AoS implementation while you build your features. Only refactor to SoA if you find that a specific system is causing a cache-miss bottleneck that prevents you from reaching your entity count goals.
 
----
 
-### Use Case: 5000 Entities
 
-When scaling to 5,000 entities, the performance difference between your current **Structure-of-Arrays (SoA)** and the proposed **Array-of-Structures (AoS)** (`MovementComponent`) is primarily a trade-off between **Cache Locality** and **Data-Processing Efficiency**.
-
-Here is how they compare at scale:
 
 ### The Verdict for 5,000 Entities
 
@@ -511,22 +498,22 @@ For a game engine with 5,000 entities, **the bottleneck is rarely the raw layout
 
 ### 1. What are you using right now (SoA)?
 
-Based on `MovementBuffers.cs` and `MovementSystem.cs`, your movement logic currently relies on these specific variables:
+Based on `MovementBuffers.h` and `MovementSystem.h`, your movement logic currently relies on these specific variables:
 
-* **`Transforms` (`Transform2D[]`)**: Your primary position data (The "Where").
-* **`Velocities` (`Vector2[]`)**: The direction and magnitude of movement (The "Intent").
-* **`Speeds` (`float[]`)**: A multiplier for velocity (The "Constraint").
-* **`Active` (`bool[]`)**: The participation mask for your loops.
+* **`Transforms` (`std::vector<Transform2D>`)**: Your primary position data (The "Where").
+* **`Velocities` (`std::vector<glm::vec2>`)**: The direction and magnitude of movement (The "Intent").
+* **`Speeds` (`std::vector<float>`)**: A multiplier for velocity (The "Constraint").
+* **`Active` (`std::vector<bool>`)**: The participation mask for your loops.
 * **`LastPositions`** / **`HasLastPosition`**: Used for collision resolution to revert invalid moves.
 
-Your `MovementSystem.Update` currently pulls these as separate `Span<T>` buffers.
+Your `MovementSystem::Update` currently pulls these as separate `std::span<T>` buffers.
 
 ### 2. Is AoS (`MovementComponent`) worth it?
 
 #### The "Yes" (Why AoS wins on Architecture):
 
-* **Reduced Complexity**: Your `EngineDriver.Tick()` loop currently passes 5+ separate buffers into `MovementSystem` and `CollisionSystem`. A `MovementComponent` would turn these into a single `Span<MovementComponent>`, cleaning up your driver significantly.
-* **Feature Expansion**: You mentioned wanting to implement steering behaviors. If you add `Acceleration` and `Friction` to a `MovementComponent`, those variables will always be bundled with the entity's velocity. In your current SoA setup, you would have to create *two new global arrays* (`Accelerations[]`, `Frictions[]`) and update every system to pass them around.
+* **Reduced Complexity**: Your `EngineDriver` tick loop currently passes 5+ separate buffers into `MovementSystem` and `CollisionSystem`. A `MovementComponent` would turn these into a single `std::span<MovementComponent>`, cleaning up your driver significantly.
+* **Feature Expansion**: You mentioned wanting to implement steering behaviors. If you add `Acceleration` and `Friction` to a `MovementComponent`, those variables will always be bundled with the entity's velocity. In your current SoA setup, you would have to create *two new global vectors* (`std::vector<float> accelerations`, `std::vector<float> frictions`) and update every system to pass them around.
 
 #### The "No" (Why your current SoA is strong):
 
@@ -536,27 +523,17 @@ Your `MovementSystem.Update` currently pulls these as separate `Span<T>` buffers
 ### 3. My Recommendation
 
 * Use **SoA** if performance is your absolute #1 priority.
-* If you are feeling the pain of "Argument Sprawl" (where every function signature has 7+ parameters), **implement the AoS `MovementComponent`**. The loss in minor cache efficiency at 5,000 entities is almost always worth the massive gain in code readability and the ability to easily add new movement features like friction or acceleration.
- * Refactor to the `MovementComponent` struct. At 5,000 entities, your CPU can easily handle the minor cache footprint of the struct, and the resulting code will be vastly easier to debug and extend as you add more complex systems.
-* **If you want the best of both worlds**: You can keep your `Transform2D` in its own array (because *every* system needs it), but bundle your **per-entity movement stats** (`Velocity`, `Speed`, `Acceleration`, `Friction`) into a `MovementComponent` struct.
-
+* If you are feeling the pain of "Argument Sprawl" (where every function signature has 7+ parameters), **implement the AoS `MovementComponent**`. The loss in minor cache efficiency at 5,000 entities is almost always worth the massive gain in code readability and the ability to easily add new movement features like friction or acceleration.
+* Refactor to the `MovementComponent` struct. At 5,000 entities, your CPU can easily handle the minor cache footprint of the struct, and the resulting code will be vastly easier to debug and extend as you add more complex systems.
+* **If you want the best of both worlds**: You can keep your `Transform2D` in its own vector (because *every* system needs it), but bundle your **per-entity movement stats** (`Velocity`, `Speed`, `Acceleration`, `Friction`) into a `MovementComponent` struct.
 
 ### How to decide based on your roadmap:
 
-If your next step is **Steering Behaviors** (as mentioned in your `movement.md`), **definitely move to the `MovementComponent` AoS**. Steering behaviors require constant access to `Acceleration`, `MaxSpeed`, and `Friction` simultaneously. If you keep these in separate arrays, your code will become extremely difficult to manage as those systems grow in complexity.
+If your next step is **Steering Behaviors**, **definitely move to the `MovementComponent` AoS**. Steering behaviors require constant access to `Acceleration`, `MaxSpeed`, and `Friction` simultaneously. If you keep these in separate arrays, your code will become extremely difficult to manage as those systems grow in complexity.
 
-**Does your current `EngineDriver` feel bloated with the current parameter passing, or is it still manageable for you to add one or two more arrays to the system?**
+# Hot Path
 
-* * *
-
-# `for` over `foreach`
-
-For high performance requirements, like calculating movement or combat every frame, use `for` loops over `foreach` loops.
-
-
-# C++ DO NOT DELETE
-
-That is a very pragmatic approach. **Focusing optimization only on the "Hot Path" (the code that runs every frame or in your update loop) is the single most effective way to improve performance without over-engineering your code.**
+Focusing optimization only on the "Hot Path" (the code that runs every frame or in your update loop) is the single most effective way to improve performance without over-engineering your code.
 
 If you use `std::map` or `std::vector` during initialization (loading JSON, setting up registers), the performance cost is one-time and negligible. It is only when those collections are accessed 60+ times per second during your game loop that they become a problem.
 
@@ -592,5 +569,3 @@ If your update loop iterates through a `std::vector<Entity*>`, the CPU has to ju
 | **Stat Updates** | Every Frame | **Refactor**: Ensure your `EntityStats` are stored in a contiguous array. |
 
 By isolating your performance-critical logic from your convenient loading logic, you keep the code readable while ensuring the game runs smoothly at 8192 entities.
-
-Does your current `FormulaProcessor::Execute` loop perform any string comparisons, or is it already using some form of internal ID/Enum?
