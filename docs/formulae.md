@@ -11,8 +11,8 @@ This document outlines the interaction between your data files and the `FormulaP
 The system is divided into three distinct roles:
 
 * **Data Layer (`.json`)**: Contains raw definitions for entities, biological traits (races), archetypes (classes), and the mathematical instructions for formulas.
-* **Initialization Layer (`StatsUpdateSystem.cs`)**: The bridge that triggers the setup of an entity's statistics.
-* **Processor Engine (`FormulaProcessor.cs`)**: The logic handler that interprets JSON instructions into executable game code.
+* **Initialization Layer (`StatsUpdateSystem.hpp`)**: The bridge that triggers the setup of an entity's statist.hpp.
+* **Processor Engine (`FormulaProcessor.hpp`)**: The logic handler that interprets JSON instructions into executable game code.
 
 
 
@@ -20,7 +20,7 @@ The system is divided into three distinct roles:
 
 Your understanding of the selection mechanism is correct: the `formulas.json` file is essentially a "dumb" data container—it stores various formulas (e.g., `UpdateStats`, `MeleeStrike`) without inherent knowledge of how they are used.
 
-The decision-making process happens within the **calling code**, which directs specific formulas to the appropriate processor method in `FormulaProcessor.cs`:
+The decision-making process happens within the **calling code**, which directs specific formulas to the appropriate processor method in `FormulaProcessor.hpp`:
 
 * **State-Mutating Formulas (`ExecuteUpdate`)**: When the system needs to persist data into the character's stats (like `UpdateStats`), it calls `ExecuteUpdate()`. This method specifically looks for `Target` fields in the JSON to modify the `stats.Values` array.
 * **Action-Calculation Formulas (`Execute`)**: When the system needs to calculate a temporary combat result (like `MeleeStrike`), it calls `Execute()`. This method interprets formulas as a chain of operations to produce a return value, without modifying the persistent `stats.Values`.
@@ -40,7 +40,7 @@ The decision-making process happens within the **calling code**, which directs s
 
 ### Initialization Workflow (`UpdateStats`)
 
-1. **Trigger**: `StatsUpdateSystem.cs` identifies the entity's `Class` and `Race`.
+1. **Trigger**: `StatsUpdateSystem.hpp` identifies the entity's `Class` and `Race`.
 2. **Dispatch**: It calls `RecalculateStats()`, which explicitly directs the `"UpdateStats"` formula to the `ExecuteUpdate()` method.
 3. **Mutation**: `ExecuteUpdate()` processes the `Set`, `Add`, and `Multiply` operations, pulling source values from `classes.json` and `races.json` to populate `stats.Values`.
 
@@ -110,7 +110,7 @@ With your new consolidated `combat_formulas.json` structure, the calculation per
 
 * * *
 
-To calculate the `MeleeStrike` using your new `Operations` structure, we must look at how your `FormulaProcessor.cs` processes these steps.
+To calculate the `MeleeStrike` using your new `Operations` structure, we must look at how your `FormulaProcessor.hpp` processes these steps.
 
 Based on your current implementation, the processor iterates through the `Operations` list and applies the math to a running total.
 
@@ -159,5 +159,5 @@ Based on your current implementation, the processor iterates through the `Operat
 This calculation matches your old string-based result exactly. The reason is that **distributive property** in algebra holds true here:
 ((A + B + C) x 1.5) = (A x 1.5) + (B x 1.5) + (C x 1.5).
 
-By multiplying each stat individually in the JSON and adding them to the total, you achieve the same mathematical result as summing them first and multiplying later, but your `FormulaProcessor.cs` now handles it more efficiently by avoiding complex string parsing at runtime.
+By multiplying each stat individually in the JSON and adding them to the total, you achieve the same mathematical result as summing them first and multiplying later, but your `FormulaProcessor.hpp` now handles it more efficiently by avoiding complex string parsing at runtime.
 
