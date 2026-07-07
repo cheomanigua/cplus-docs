@@ -4,9 +4,19 @@
 
 ## Point and click
 
+### Vector2MoveTowards
+
+```cpp
+// Movement Logic (Moving toward destination)
+if (isMoving) {
+    ussPasadena = Vector2MoveTowards(ussPasadena, destination, speed * dt);
+    if (Vector2Equals(ussPasadena, destination)) isMoving = false;
+}
+```
+
 ### Normalization
 
-```c
+```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
     Vector2 pos = {ussPasadenaPos.x, ussPasadenaPos.y};
@@ -25,7 +35,7 @@ if (isMoving) {
 
 ### Lerp
 
-```c
+```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
   // 0.1f is the interpolation factor (tweak this for speed)
@@ -43,7 +53,7 @@ if (isMoving) {
 
 ### Custom
 
-```c
+```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
     float dx = destination.x - ussPasadenaPos.x;
@@ -69,7 +79,7 @@ if (isMoving) {
 
 ### Raylib
 
-```c
+```cpp
 class RadarSystem {
     public:
     static bool IsWithinRadarRange(const PositionComp& sourcePos, 
@@ -88,7 +98,7 @@ class RadarSystem {
 
 ### Custom
 
-```c
+```cpp
 class RadarSystem {
     public:
     static bool IsWithinRadarRange(const PositionComp& sourcePos, 

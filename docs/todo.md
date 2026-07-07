@@ -141,3 +141,59 @@ In low-level `RenderingServer` logic, **Transforming** and **Drawing** are two s
 * **`CanvasItemClear(rid)`**: This is critical. If you omit this, `CanvasItemAddRect` will add a *new* rectangle on top of the old one every single frame. Your game would render thousands of squares in the same spot, leading to a massive performance hit and a visual blur.
 * **Centered Coordinates**: Using `new Rect2(-16, -16, 32, 32)` ensures the square is drawn centered on the entity's position (the origin). If you used `(0, 0, 32, 32)`, the square would be drawn to the bottom-right of the entity's actual coordinates.
 * **Performance Note**: While `Clear` and `AddRect` are very fast, for hundreds of entities, you might eventually want to cache the "Mesh" or "Texture" so you aren't sending the draw command every single frame. For now, this is the most reliable way to get visual feedback.
+
+
+#### 4. DrawMesh
+
+You are correct to be cautious about performance; calling an `if` statement every frame for every entity is generally fine for small projects, but it does add up in larger systems.
+
+To answer your question: **They are not inherently "slow" in a modern CPU, but they are not the most scalable approach.**
+
+Here is the breakdown of why and how you can optimize this.
+
+### 1. Are `if` statements performant?
+
+* **Branch Prediction**: Modern CPUs are incredibly good at "predicting" which branch will be taken. If all your entities of ID 1 are circles, the CPU will learn the pattern and execute the code with virtually zero penalty.
+* **The Cost**: The cost of an `if` statement is measured in nanoseconds. You would need thousands of entities being drawn every frame before this check actually creates a bottleneck.
+
+### 2. The Better "Architectural" Way: Data-Driven Rendering
+
+Instead of asking "What shape is this ID?" inside your `DrawMesh` method, you should store the **shape information** inside the `EntityRegistry` or a `Component`.
+
+This is called the **Data-Oriented** approach.
+
+#### The Concept:
+
+Instead of `if (IsCircle(id))`, you query a component:
+
+```cpp
+void RaylibGameView::DrawMesh(int32_t id, const Transform2D& transform) {
+    // 1. Fetch the RenderComponent associated with this ID
+    // This component tells the View EXACTLY what to draw, 
+    // so no 'if' logic is needed.
+    const auto& renderData = registry->GetRenderData(id); 
+
+    switch (renderData.ShapeType) {
+        case Shape::Circle:
+            DrawCircleV({transform.x, transform.y}, renderData.Size, renderData.Color);
+            break;
+        case Shape::Rectangle:
+            DrawRectangleV({transform.x, transform.y}, {renderData.Width, renderData.Height}, renderData.Color);
+            break;
+    }
+}
+
+```
+
+### 3. Why the "Data-Driven" approach is faster
+
+* **No Logic in the Loop**: Your `DrawMesh` method stops being a decision-maker and becomes a simple **executor**. It just reads data and calls the function.
+* **Scalability**: If you decide to add a new shape (e.g., Triangle), you don't have to change your `DrawMesh` logic as much; you just add a new `Shape` enum.
+* **Cache Friendliness**: By keeping `RenderComponent` data packed together in your `EntityRegistry`, you ensure that when you iterate through entities to draw them, the CPU is reading memory linearly, which is much faster than jumping around to check ID types.
+
+### Summary Recommendation
+
+* **For now**: Your `if` statements are perfectly fine. Don't let "premature optimization" stop you from finishing your engine.
+* **For the future**: Transition toward a `RenderComponent` that stores the shape, color, and size. This makes your `RaylibGameView` much cleaner and follows the architecture of high-performance game engines.
+
+Does this data-driven approach make sense, or would you like to see how to define that `RenderComponent` in your `EntityRegistry`?
