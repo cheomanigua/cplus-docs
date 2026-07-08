@@ -110,7 +110,7 @@ int main() {
 
 ---
 
-## Differences between Arrays and Vectors
+## Arrays vs Vectors
 
 | Feature | Array (`std::array<T, N>`) | Vector (`std::vector<T>`) |
 | --- | --- | --- |

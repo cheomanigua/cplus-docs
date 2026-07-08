@@ -38,12 +38,12 @@ sequenceDiagram
 
     %% Player Path
     ED->>Input: 1. Input Phase (Player only)
-    Input->>ED: Write Velocity directly to MovementBuffers
+    Input->>ED: Write Velocity directly to MovementComponent
 
     %% NPC / External Path
     ED->>Queue: 2. Process CommandQueue
     Queue->>ED: Dequeue Move / Equip / Stats commands
-    ED->>ED: Apply to MovementBuffers
+    ED->>ED: Apply to MovementComponent
 
     ED->>Move: 3. Movement Phase
     Move->>Move: pos += vel * speed * deltaTime
@@ -68,10 +68,10 @@ sequenceDiagram
 
 ## 3. Core Components
 
-### Data Layout – MovementBuffers (SoA)
+### Data Layout – MovementComponent (SoA)
 
 ```cpp
-struct MovementBuffers
+struct MovementComponent
 {
     Transform2D Transforms[EngineConfig::MaxEntities];
     Vector2 Velocities[EngineConfig::MaxEntities];

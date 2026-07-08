@@ -337,7 +337,7 @@ struct MovementComponent {
 
 ```
 
-**`MovementBuffers.h`**
+**`MovementComponent.h`**
 
 ```cpp
 #pragma once
@@ -345,11 +345,11 @@ struct MovementComponent {
 #include "MovementComponent.h"
 #include "EngineConfig.h"
 
-class MovementBuffers {
+class MovementComponent {
 public:
     std::vector<MovementComponent> Components;
 
-    MovementBuffers() {
+    MovementComponent() {
         Components.resize(EngineConfig::MaxEntities);
     }
 };
@@ -398,7 +398,7 @@ In SoA, you store each field in its own continuous `std::vector`.
 
 In the SoA pattern, data is decoupled into discrete vectors to maximize cache line utilization during specific system passes.
 
-**`MovementBuffersSoA.h`**
+**`MovementComponentSoA.h`**
 
 ```cpp
 #pragma once
@@ -407,7 +407,7 @@ In the SoA pattern, data is decoupled into discrete vectors to maximize cache li
 #include "Transform2D.h"
 #include "EngineConfig.h"
 
-class MovementBuffersSoA {
+class MovementComponentSoA {
 public:
     std::vector<Transform2D> Transforms;
     std::vector<glm::vec2> Velocities;
@@ -416,7 +416,7 @@ public:
     std::vector<bool> Active;
     std::vector<bool> HasLastPosition;
 
-    MovementBuffersSoA() {
+    MovementComponentSoA() {
         Transforms.resize(EngineConfig::MaxEntities);
         Velocities.resize(EngineConfig::MaxEntities);
         LastPositions.resize(EngineConfig::MaxEntities);
@@ -498,7 +498,7 @@ For a game engine with 5,000 entities, **the bottleneck is rarely the raw layout
 
 ### 1. What are you using right now (SoA)?
 
-Based on `MovementBuffers.h` and `MovementSystem.h`, your movement logic currently relies on these specific variables:
+Based on `MovementComponent.h` and `MovementSystem.h`, your movement logic currently relies on these specific variables:
 
 * **`Transforms` (`std::vector<Transform2D>`)**: Your primary position data (The "Where").
 * **`Velocities` (`std::vector<glm::vec2>`)**: The direction and magnitude of movement (The "Intent").

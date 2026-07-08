@@ -57,18 +57,22 @@ You must update your C++ structs so the `DataLoader` can map the JSON fields int
 * Update `ClassData` and `RaceData` to include `int ClassDex` and `int RaceDex`.
 * Update `EntityStats` to include `float Dexterity`.
 
-### 3. Data Transfer Object (`include/Core/CharacterSheetDto.hpp`)
+### 3. Data Transfer Object (`include/Core/Contracts/CharacterSheetDto.hpp`)
 
 You must update your DTO to ensure the new stat is available for your UI or summary reports.
 
 * Add `int Dexterity` to the struct members.
 * Update the constructor to accept and initialize the new `Dexterity` parameter.
 
-### 4. `DataLoader.cpp`
+### 4. `src/Core/FormulaProcessor.cpp`
+
+You must update your `FormulaProcessor::GetStatRef` and `FormulaProcessor::Execute`.
+
+### 5. `src/Engine/DataLoader.cpp`
 
 Because you used `nlohmann::json`'s automatic mapping, adding the fields to the structs is usually enough. However, if you have manual logic, ensure the new fields are being read correctly during the `LoadCharacterFile` process.
 
-### 5. `EngineDriver.cpp`
+### 6. `src/Engine/EngineDriver.cpp`
 
 This is where the manual "wiring" happens for the `FormulaProcessor`. You must add the registration logic for the new attribute:
 
@@ -153,7 +157,27 @@ struct CharacterSheetDto {
 }:
 ```
 
-### 4. Update Data Files (`data/`)
+### 4. Update `FormulaProcessor.cpp`
+
+```cpp
+float FormulaProcessor::GetStatRef(const std::string& name, EntityStats& stats, 
+                                    const ClassData& cls, const RaceData& race) {
+    // 1. Entity Stats
+    if (name == "Dexterity")    return stats.Dexterity; // Add this line
+    
+    // 2. Class Data (No cast needed, return by value)
+    if (name == "ClassDex")     return static_cast<float>(cls.ClassDex); // Add this line
+    
+    // 3. Race Data (No cast needed, return by value)
+    if (name == "RaceDex")      return static_cast<float>(race.RaceDex); // Add this line
+
+void FormulaProcessor::Execute(const std::string& formulaName, EntityStats& stats, 
+                               const ClassData& cls, const RaceData& race) {
+
+        else if (targetName == "Dexterity")    stats.Dexterity = currentVal; // Add this line
+```
+
+### 5. Update Data Files (`data/`)
 
 You must update your JSON files so the loader has values to put into your new struct members.
 
