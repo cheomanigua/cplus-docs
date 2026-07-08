@@ -42,7 +42,20 @@ Which design feels like it fits the "vibe" of your game better—a world where y
 
 # Adding new Attribute
 
+Files involved:
+
+```
+data/character/classes.json
+data/character/races.json
+data/system/formulas.json
+include/Core/Contracts/CharacterSheetDto.hpp
+include/Core/Model.hpp
+src/Core/ConsoleGameView.cpp
+src/Core/FormulaProcessor.cpp
+```
+
 To add "Dexterity" to your engine, you need to update **5 areas** to ensure the data propagates correctly from your JSON files through to the `EntityStats` struct and your display layer.
+
 
 ### 1. Data Definitions (`data/`)
 
