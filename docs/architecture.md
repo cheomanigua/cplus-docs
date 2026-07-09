@@ -2,18 +2,22 @@
 
 **Building Video Games with Data-Driven Architecture**
 
-This document is a practical reference. It is written for developers who want to build better video games — especially those struggling with messy code, slow iteration, or performance issues — even if you’ve never heard of terms like **Data-Driven Design**, **MVC**, **ECS**, or **Data-Oriented Design (DoD)**.
+This document is a practical reference. It is written for developers who want to build better video games — especially those struggling with messy code, slow iteration, or performance issues — even if you’ve never heard of terms like **Data-Driven Design**, **Data-Oriented Design (DoD)**, **ECS** or **MVC**.
+
+- **Data-Driven Design**: loading configuration from files.
+- **Data-Oriented Design**: structuring memory for cache efficiency.
+- **ECS**: organizing state as components.
 
 ### Why This Matters for Game Development
 
-Traditional game code often looks like this:  
-- Every monster, weapon, or spaceship is a big class with data *and* behavior mixed together.  
-- Adding a new weapon or changing balance requires editing code and recompiling.  
+Traditional game code often looks like this:
+- Every monster, weapon, or spaceship is a big class with data *and* behavior mixed together.
+- Adding a new weapon or changing balance requires editing code and recompiling.
 - Performance suffers because data is scattered across memory (causing “cache misses” — the CPU keeps waiting for data).
 
-**The solution** is a **data-driven architecture**.  
-Think of your game engine as a “smart factory”:  
-- The **data files** (like recipes) tell the factory what to build.  
+**The solution** is a **data-driven architecture**.
+Think of your game engine as a “smart factory”:
+- The **data files** (like recipes) tell the factory what to build.
 - The **engine code** is the machinery that runs efficiently no matter what recipes you feed it.
 
 **Benefits**:
@@ -26,7 +30,7 @@ Think of your game engine as a “smart factory”:
 ## Core Ideas, Explained Simply
 
 #### 1. Data-Driven Design (The Big Idea)
-Instead of hard-coding everything, you store game content in external files (usually JSON).  
+Instead of hard-coding everything, you store game content in external files (usually JSON).
 The engine reads these files at runtime and builds the game world dynamically.
 
 **Example**: A `definitions.json` file might say:
@@ -43,20 +47,20 @@ The engine reads these files at runtime and builds the game world dynamically.
 Your code loads this and creates ships/weapons on the fly. Change the JSON → no recompile needed.
 
 #### 2. Data-Oriented Design (DoD) – Organizing for Speed
-This is about arranging data in memory so the CPU can process it quickly.  
-**Key rule**: Keep related data close together (contiguous arrays) instead of scattered objects.  
+This is about arranging data in memory so the CPU can process it quickly.
+**Key rule**: Keep related data close together (contiguous arrays) instead of scattered objects.
 This reduces “pointer chasing” and cache misses.
 
 #### 3. Two Practical Patterns
 
-**MVC (Model-View-Controller)** – Great for user interfaces and overall structure.  
-- **Model**: The data (health, position, etc.).  
-- **View**: What the player sees (sprites, UI).  
+**MVC (Model-View-Controller)** – Great for user interfaces and overall structure.
+- **Model**: The data (health, position, etc.).
+- **View**: What the player sees (sprites, UI).
 - **Controller**: Handles input and orchestrates changes.
 
-**ECS (Entity Component System)** – Great for the high-performance simulation core (physics, combat, AI).  
-- **Entity**: Just a unique ID (like a serial number).  
-- **Component**: Pure data (e.g., a struct with health, position).  
+**ECS (Entity Component System)** – Great for the high-performance simulation core (physics, combat, AI).
+- **Entity**: Just a unique ID (like a serial number).
+- **Component**: Pure data (e.g., a struct with health, position).
 - **System**: Logic that processes many components at once (e.g., a “DamageSystem” that loops through all entities with health).
 
 You can (and often should) use **both** together: ECS for the heavy game world simulation, and MVC-style layers as thin adapters for UI and input.
@@ -130,15 +134,15 @@ In C++, you would typically use `std::string` and standard structures. To mainta
 #include <string>
 
 // Data from JSON (loaded once)
-struct ShipClassConfig { 
-    int baseHull; 
-    /* ... */ 
+struct ShipClassConfig {
+    int baseHull;
+    /* ... */
 };
 
-struct WeaponDefConfig { 
-    std::string name; 
-    int damage; 
-    /* ... */ 
+struct WeaponDefConfig {
+    std::string name;
+    int damage;
+    /* ... */
 };
 
 // Model - holds live game data
@@ -219,7 +223,7 @@ public:
    Create a `definitions.json` with a few items/ships and a simple loader.
 
 2. **Choose Your Core**  
-   - Beginners / UI-heavy: Start with MVC + data-driven factories.  
+   - Beginners / UI-heavy: Start with MVC + data-driven factories.
    - Performance / many entities: Move the simulation to ECS.
 
 3. **Core Building Blocks**
@@ -228,12 +232,12 @@ public:
    - **Dirty Flags**: Mark data as changed so you only recalculate when needed.
    - **Tags/Masks**: For fast filtering.
 
-4. **Separate Concerns**  
+4. **Separate Concerns**
    Keep game logic away from rendering. Use Flyweight pattern (shared blueprints referenced by index).
 
-5. **Tools & Techniques**  
-   - Prefer structs for components.  
-   - Validate JSON at load.  
+5. **Tools & Techniques**
+   - Prefer structs for components.
+   - Validate JSON at load.
    - Add a debug inspector for entities.
 
 ### Key Differences in the C++ Implementation
@@ -245,8 +249,8 @@ public:
 
 ## Common Trade-offs & Tips
 
-**Pros**: Fast iteration, mod support, excellent performance at scale.  
-**Cons**: More upfront design; debugging can feel indirect.  
+**Pros**: Fast iteration, mod support, excellent performance at scale.
+**Cons**: More upfront design; debugging can feel indirect.
 
 **Tips**:
 - Start with data for stats/items. Add full ECS later.
