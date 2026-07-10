@@ -25,21 +25,6 @@ If you want the best of both worlds, use **Virtual Attributes**. Instead of stor
 * **`ModifierBonus`**: This represents additive/multiplicative bonuses from gear (like the Ring of Strength).
 * **`TotalHealth`**: This is a calculated property (not stored) that returns `BaseHealth + (ModifierBonus * Multiplier)`.
 
-### How to implement this in your ECS:
-
-You can keep your current `InitStats` as the *Base* calculation, and update your `EntityRegistry` to apply Gear bonuses as **temporary modifiers** rather than permanently altering the `BaseHealth` value.
-
-**Why this is better:**
-
-* You don't need to re-run your `InitStats` formula every time someone equips a ring.
-* You preserve the "natural" health (the player knows their base class health).
-* Your combat system simply queries the *Total* whenever it needs to check for death.
-
-**Recommendation:**
-If your game is complex (with many items), go with the **Dynamic/Dirty Flag approach**. Games like *Diablo* or *World of Warcraft* use this because it prevents bugs where stat initialization logic gets "trapped" in a specific state. It makes the game feel much more responsive to player choices.
-
-Which design feels like it fits the "vibe" of your game better—a world where you build a character up slowly, or one where items are the primary way to define power?
-
 # Adding new Attribute
 
 Files involved:
