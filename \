@@ -108,7 +108,7 @@ To fully integrate the **Dexterity** attribute, you must modify the following fi
 
 To add **Dexterity** to your system, follow these specific code modifications.
 
-### 1. Data Files (`data/`)
+### 1. Update Data Files (`data/`)
 
 You must update your JSON files so the loader has values to put into your new struct members.
 
@@ -146,34 +146,22 @@ You must update your JSON files so the loader has values to put into your new st
 
 
 
-### 2. Models and Headers (`include/`)
+### 2. Update Models and Headers (`include/`)
 
 **`include/Components/StatsComponents.hpp`**:
-
-```cpp
-        for (auto& stats : Data) {
-            // ... existing ...
-            stats.Dexterity = 0.0f; // Add this line
-            // ... existing ...
-    inline void InitializeStats(int32_t id, float str, float intel, float dex, float cha, float health, float mana) { // Add dex
-        auto& stats = Data[id];
-        // ... existing ...
-        stats.Dexterity = dex; // Add this line
-        // ... existing ...
-```
 
 **`include/Core/Contracts/CharacterSheedDto.hpp`**:
 
 ```cpp
 struct CharacterSheetDto {
     // ... existing ...
-    int Dexterity; // Add this line
+    int Dexterity; // Add this
 
     CharacterSheetDto(std::string name, std::string weapon, std::string skill, 
                       int health, int mana, int strength, int intelligence, int dexterity) // Add dexterity
         // ... existing ...
-        Dexterity(dexterity), // Add this line
-        // ... existing ...
+        Intelligence(intelligence),
+        Dexterity(dexterity) {} // Add this
 }:
 ```
 
@@ -184,73 +172,62 @@ You must update your structs `ClassData` and `RaceData` so the `DataLoader` can 
 ```cpp
 struct ClassData {
     // ... existing ...
-    int ClassDex; // Add this line
+    int ClassDex; // Add this
 };
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClassData, ClassHealth, ClassMana, ClassStr, ClassInt, ClassDex, ClassPrimarySkill) // Add ClassDex
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ClassData, ClassHealth, ClassMana, ClassStr, ClassInt, ClassDex, PrimarySkill) // Add ClassDex
 
 struct RaceData {
     // ... existing ...
-    int RaceDex;  // Add this line
+    int RaceDex;  // Add this
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RaceData, RaceStr, RaceInt, RaceDex) // Add RaceDex
 
 struct EntityStats {
     // ... existing ...
-    float Dexterity; // Add this line
-    // ... existing ...
-
-    std::unordered_map<std::string, float> GetDynamicAttributes() const {
-    return {
-        // ... existing ...
-        {"Dexterity", Dexterity}, // Add this line
-        // ... existing ...
+    float Dexterity; // Add this
 };
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(EntityStats, Health, Mana, Strength, Intelligence, Dexterity, IsDirty) // Add Dexterity
 ```
 
+### 2. Update `EngineDriver.cpp`
 
-### 3. Processing and Logic (`src/`)
-
-**`src/Core/ConsoleGameView.cpp`**:
+You need to bridge the new data to the `FormulaProcessor`.
 
 ```cpp
-    const auto& activeEntities = registry.GetActiveEntities();
-    
-    std::cout << "\n" << std::left 
-              // ... existing ...
-              << std::setw(8)  << "Dex" // Add this line
-              // ... existing ...
+// 3. Bind new Dexterity data
+FormulaProcessor::RegisterSource("ClassDex", [&classData]() -> float { 
+    return static_cast<float>(classData.ClassDex); 
+});
+FormulaProcessor::RegisterSource("RaceDex", [&raceData]() -> float { 
+    return static_cast<float>(raceData.RaceDex); 
+});
+FormulaProcessor::RegisterSource("Dexterity", [stats]() -> float { 
+    return stats->Dexterity; 
+});
 
-                      std::cout << std::left << std::setw(5)  << id 
-                  // ... existing ...
-                  << std::setw(8)  << (int)stats.Dexterity // Add this line
-                  // ... existing ...
+// 4. Run the formula for the new stat
+stats->Dexterity = FormulaProcessor::Execute("UpdateStats", "Dexterity");
 
 ```
-**`src/Core/FormulaProcessor.cpp`**:
+
+
+### 4. Update `FormulaProcessor.cpp`
 
 ```cpp
 float FormulaProcessor::GetStatRef(const std::string& name, EntityStats& stats, 
                                     const ClassData& cls, const RaceData& race) {
-    // 2. Entity Stats
+    // 1. Entity Stats
     if (name == "Dexterity")    return stats.Dexterity; // Add this line
     
-    // 3. Class Data (No cast needed, return by value)
+    // 2. Class Data (No cast needed, return by value)
     if (name == "ClassDex")     return static_cast<float>(cls.ClassDex); // Add this line
     
-    // 4. Race Data (No cast needed, return by value)
+    // 3. Race Data (No cast needed, return by value)
     if (name == "RaceDex")      return static_cast<float>(race.RaceDex); // Add this line
 
-void FormulaProcessor::ExecuteUpdateStats(const std::string& formulaName, EntityStats& stats, 
+void FormulaProcessor::Execute(const std::string& formulaName, EntityStats& stats, 
                                const ClassData& cls, const RaceData& race) {
 
         else if (targetName == "Dexterity")    stats.Dexterity = currentVal; // Add this line
-```
-
-**`src/Main.cpp`**:
-
-```cpp
-        // Strength: 1.0f, Intelligence: 1.0f, Dexterity: 1.0f, Charisma: 1.0f, Health: 10.0f, Mana: 10.0f
-        statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f); // Add 1.0f for Dexterity
 ```
 
