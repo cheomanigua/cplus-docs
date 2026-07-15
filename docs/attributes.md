@@ -64,8 +64,8 @@ To fully integrate the **Dexterity** attribute, you must modify the following fi
 
 * **`classes.json`** / **`races.json`**: Ensure these files contain the required `"ClassDex"` and `"RaceDex"` keys, as the system reads these directly into the data models.
 * **`formulas.json`**: Add the following entries to define how the system derives the final strength value:
-* `{ "Type": "Set", "Stat": "Dexterity", "Source": "ClassDex" }`
-* `{ "Type": "Add", "Stat": "Dexterity", "Source": "RaceDex" }`
+    * `{ "Type": "Set", "Stat": "Dexterity", "Source": "ClassDex" }`
+    * `{ "Type": "Add", "Stat": "Dexterity", "Source": "RaceDex" }`
 
 
 #### 2. Models and Headers (`include/`)
@@ -79,15 +79,11 @@ To fully integrate the **Dexterity** attribute, you must modify the following fi
 #### 3. Processing and Logic (`src/`)
 
 * **`FormulaProcessor.cpp`**: Update the getter and execution logic:
-* `if (name == "Dexterity") return stats.Dexterity;`
-* `if (name == "RaceDex") return static_cast<float>(race.RaceDex);`
-* `if (name == "ClassDex") return static_cast<float>(cls.ClassDex);`
-* In the `Execute` method, include: `if (targetName == "Dexterity") stats.Dexterity = currentVal;`.
-* **`Main.cpp`**: Update the initialization call to pass the `Dexterity` value explicitly:
-    ```cpp
-    // Strength: 1.0f, Intelligence: 1.0f, Dexterity: 1.0f, Charisma: 1.0f, Health: 10.0f, Mana: 10.0f
-    statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f);
-    ```
+    * `if (name == "Dexterity") return stats.Dexterity;`
+    * `if (name == "RaceDex") return static_cast<float>(race.RaceDex);`
+    * `if (name == "ClassDex") return static_cast<float>(cls.ClassDex);`
+    * In the `Execute` method, include: `if (targetName == "Dexterity") stats.Dexterity = currentVal;`.
+* **`Main.cpp`**: Update the initialization call to pass the `Dexterity` value `1.0f` explicitly: `statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f);`
 * **`ConsoleGameView.cpp`**: Add the output stream operator for the stat: `<< std::setw(8) << (int)stats.Dexterity`.
 
 ### Summary Table
@@ -116,8 +112,8 @@ You must update your JSON files so the loader has values to put into your new st
 
 ```json
 {
-  "Warrior": { "ClassStr": 10, "ClassInt": 5, "ClassDex": 8, ... },
-  "Wizard": { "ClassStr": 5, "ClassInt": 15, "ClassDex": 10, ... }
+  "Warrior": { "ClassStr": 10, "ClassInt": 5, "ClassDex": 8, ... }, // Add ClassDex
+  "Wizard": { "ClassStr": 5, "ClassInt": 15, "ClassDex": 10, ... }  // Add RaceDex
 }
 
 ```
@@ -126,8 +122,8 @@ You must update your JSON files so the loader has values to put into your new st
 
 ```json
 {
-  "Human": { "RaceStr": 2, "RaceInt": 5, "RaceDex": 5 },
-  "Orc": { "RaceStr": 10, "RaceInt": 1, "RaceDex": 3 }
+  "Human": { "RaceStr": 2, "RaceInt": 5, "RaceDex": 5 }, // Add RaceDex
+  "Orc": { "RaceStr": 10, "RaceInt": 1, "RaceDex": 3 }   // Add RaceDex
 }
 
 ```
@@ -142,7 +138,6 @@ You must update your JSON files so the loader has values to put into your new st
 
 ```
 
-**Important:** Because you are using `nlohmann::json`'s automatic mapping (via `NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE` or similar in your code), **ensure you update the macro or the `from_json` function** to include `ClassDex`, `RaceDex`, etc., otherwise, the loader will ignore these new keys in your JSON files.
 
 
 
@@ -155,10 +150,10 @@ You must update your JSON files so the loader has values to put into your new st
             // ... existing ...
             stats.Dexterity = 0.0f; // Add this line
             // ... existing ...
-    inline void InitializeStats(int32_t id, float str, float intel, float dex, float cha, float health, float mana) { // Add dex
+    inline void InitializeStats(int32_t id, float strength, float intelligence, float dexterity, float health, float mana) { // Add dexterity
         auto& stats = Data[id];
         // ... existing ...
-        stats.Dexterity = dex; // Add this line
+        stats.Dexterity = dexterity; // Add this line
         // ... existing ...
 ```
 
@@ -180,6 +175,8 @@ struct CharacterSheetDto {
 **`include/Core/Model.hpp`**:
 
 You must update your structs `ClassData` and `RaceData` so the `DataLoader` can read the new JSON keys. Also, because these use the automatic macro, you must update the macro arguments whenever you add new fields:
+
+**Important:** Because you are using `nlohmann::json`'s automatic mapping (via `NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE` or similar in your code), **ensure you update the macro or the `from_json` function** to include `ClassDex`, `RaceDex`, etc., otherwise, the loader will ignore these new keys in your JSON files.
 
 ```cpp
 struct ClassData {
@@ -250,7 +247,7 @@ void FormulaProcessor::ExecuteUpdateStats(const std::string& formulaName, Entity
 **`src/Main.cpp`**:
 
 ```cpp
-        // Strength: 1.0f, Intelligence: 1.0f, Dexterity: 1.0f, Charisma: 1.0f, Health: 10.0f, Mana: 10.0f
-        statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f); // Add 1.0f for Dexterity
+        // Strength: 1.0f, Intelligence: 1.0f, Dexterity: 1.0f, Health: 10.0f, Mana: 10.0f
+        statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f); // Add 1.0f for Dexterity
 ```
 
