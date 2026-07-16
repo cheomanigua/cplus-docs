@@ -152,3 +152,59 @@ tr:nth-child(even) {
     .toc-sidebar { display: none; }
     .content { margin-right: 0; }
 }
+
+/* Tab Navigation Container */
+.tabs {
+    margin: 20px 0;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Tab Buttons Row */
+.tab-buttons {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    flex-wrap: wrap;
+}
+
+.tab-button {
+    padding: 12px 20px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-right: 1px solid #ddd;
+    font-weight: 600;
+    color: #555;
+    transition: all 0.2s;
+}
+
+.tab-button:hover {
+    background: #f0f0f4;
+}
+
+.tab-button.active {
+    background: #fff;
+    color: #007bff;
+    border-bottom: 3px solid #007bff;
+    position: relative;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 20px;
+    background: #fff;
+    animation: fadeIn 0.3s;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

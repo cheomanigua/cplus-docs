@@ -7,21 +7,50 @@ In C++, an **enumeration** is a user-defined type that defines a set of named co
 [!INFO]
 By convention, enum name should be in singular.
 
-There are to types of enumeration: Unscoped enumeration and Scoped enumeration (Enum Class). Modern C++ recommends using Scoped enumeration. However, I find it cumbersome and if your use of enums is limited, Unscoped enums are cleaner and simplier.
+There are to types of enumeration: **Unscoped enumeration** and **Scoped enumeration (Enum Class)**.
 
-## Unscoped Enum
+The primary difference between unscoped enums (`enum`) and scoped enums (`enum class`) in C++ is how they handle type safety, name collisions, and implicit conversions.
 
-They will implicitly convert to integers, and the enumerators are placed into the scope region where the enumeration is defined.
+### Key Differences at a Glance
 
+| Feature | Unscoped Enum (`enum`) | Scoped Enum (`enum class`) |
+| --- | --- | --- |
+| **Scope** | Pollutes the surrounding namespace | Members are scoped to the enum name |
+| **Type Safety** | Weak (implicitly converts to `int`) | Strong (no implicit conversion to `int`) |
+| **Namespace** | Must be unique in the parent scope | Can share names with other scopes |
 
-## Scoped Enum (Enum Class)
+### Detailed Breakdown
 
-Scoped enumerations work similarly to unscoped enumerations, but have two primary differences: They won’t implicitly convert to integers, and the enumerators are only placed into the scope region of the enumeration (not into the scope region where the enumeration is defined).
+* **Namespace Pollution**:
+    * **Unscoped**: The enumerators (e.g., `Monday`) are injected into the same scope as the `enum` definition. If you have two different `enum` types that both use the name `Monday`, you will trigger a naming collision.
+    * **Scoped**: The enumerators must be accessed using the `EnumName::Enumerator` syntax. This prevents collisions, allowing you to use the same names in different `enum class` types without conflict.
+* **Implicit Conversions**:
+    * **Unscoped**: These automatically convert to `int`. This can lead to bugs where you accidentally compare an enum to an unrelated integer value, or perform arithmetic on them without intending to.
+    * **Scoped**: These are strongly typed and do not implicitly convert to `int`. You must use a `static_cast<int>(...)` if you specifically need to treat the enum as an integer value.
+* **Explicit Casting**:
+    * Because scoped enums do not convert implicitly, you are forced to be explicit when converting between the `enum` type and its underlying integer representation. This makes your code more predictable and prevents accidental logic errors.
+
+In modern C++, **scoped enums are generally preferred** unless you specifically require the implicit integer conversion behavior for legacy reasons or specific architectural designs.
+
+Does this clarify the trade-offs between the two types for your documentation?
 
 
 ### Key Points About C++ Enums
 
 1. **Syntax**:
+
+:::tabs
+@tab Unscoped enum
+
+```cpp
+enum EnumName
+{
+    Value1,  // Implicitly assigned 0
+    Value2,  // Implicitly assigned 1
+    Value3   // Implicitly assigned 2
+};
+```
+@tab Scoped enum
 ```cpp
 enum class EnumName
 {
@@ -30,11 +59,25 @@ enum class EnumName
     Value3   // Implicitly assigned 2
 };
 ```
+:::
+
 
 
 2. **Underlying Type**:
 * By default, enums use `int` as the underlying type, but you can specify other integral types (`uint8_t`, `int8_t`, `short`, `unsigned short`, `int`, `unsigned int`, `long`, `unsigned long`).
-* Example:
+
+:::tabs
+@tab Unscoped enum
+
+```cpp
+enum Day : uint8_t
+{
+    Monday = 1,
+    Tuesday = 2,
+    Wednesday = 3
+};
+```
+@tab Scoped enum
 ```cpp
 enum class Day : uint8_t
 {
@@ -43,11 +86,25 @@ enum class Day : uint8_t
     Wednesday = 3
 };
 ```
+:::
+
+
 
 
 3. **Explicit Values**:
 * You can assign specific values to enum members.
-* Example:
+
+:::tabs
+@tab Unscoped enum
+```cpp
+enum ErrorCode
+{
+    None = 0,
+    NotFound = 404,
+    ServerError = 500
+};
+```
+@tab Scoped enum
 ```cpp
 enum class ErrorCode
 {
@@ -56,11 +113,22 @@ enum class ErrorCode
     ServerError = 500
 };
 ```
+:::
 
 
 4. **Usage**:
 * Enums are used to improve code readability and maintainability by replacing magic numbers or strings with meaningful names.
-* Example:
+
+:::tabs
+@tab Unscoped enum
+```cpp
+Day today = Monday;
+if (today == Monday)
+{
+    std::cout << "It's Monday!" << std::endl;
+}
+```
+@tab Scoped enum
 ```cpp
 Day today = Day::Monday;
 if (today == Day::Monday)
@@ -68,27 +136,48 @@ if (today == Day::Monday)
     std::cout << "It's Monday!" << std::endl;
 }
 ```
-
+:::
 
 5. **Enum Operations**:
 * **ToString**: C++ does not have a built-in `ToString()`. You must implement a helper function to convert the enum to a string.
+
+:::tabs
+@tab Unscoped enum
+```cpp
+// Requires custom implementation
+std::cout << DayToString(Monday) << std::endl; // Outputs: Monday
+```
+@tab Scoped enum
 ```cpp
 // Requires custom implementation
 std::cout << DayToString(Day::Monday) << std::endl; // Outputs: Monday
 ```
-
+:::
 
 * **Parse**: C++ does not have a built-in `Parse()`. You must implement a helper to convert a string to an enum value.
-```cpp
-Day day = StringToDay("Tuesday");
-```
+    ```cpp
+    Day day = StringToDay("Tuesday");
+    ```
 
 * **Iterating**: There is no built-in `GetValues()`. You must manually define a collection or use a library like `magic_enum`.
 
 
 6. **Flags Attribute**:
 * C++ does not have a `[Flags]` attribute. Instead, you manually define values as powers of 2 and overload bitwise operators for the `enum class` to allow type-safe combining.
-* Example:
+
+:::tabs
+@tab Unscoped enum
+```cpp
+enum Permissions : uint8_t
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Delete = 4
+};
+// Manually implement bitwise operators
+```
+@tab Scoped enum
 ```cpp
 enum class Permissions : uint8_t
 {
@@ -98,13 +187,28 @@ enum class Permissions : uint8_t
     Delete = 4
 };
 // Manually implement bitwise operators
-```
+:::
 
 
 7. **Common Practices**:
 * Use singular names for enums (e.g., `Day` instead of `Days`) unless it’s a bitmask enum, where plural is common.
 * Define a `None` or `Unknown` value for cases where no valid option applies.
 * Enums are often used in switch statements for clean control flow:
+
+:::tabs
+@tab Unscoped enum
+```cpp
+switch (today)
+{
+    case Monday:
+        std::cout << "Start of the week!" << std::endl;
+        break;
+    default:
+        std::cout << "Not Monday." << std::endl;
+        break;
+}
+```
+@tab Scoped enum
 ```cpp
 switch (today)
 {
@@ -116,6 +220,7 @@ switch (today)
         break;
 }
 ```
+:::
 
 
 8. **Limitations**:
@@ -127,10 +232,10 @@ switch (today)
 9. **Type Safety**:
 * `enum class` prevents implicit conversion to `int`, enforcing type safety.
 * Casting an invalid integer to an enum is possible using `static_cast` and may cause undefined behavior if not careful:
-```cpp
-Day invalid = static_cast<Day>(999); // Compiles but may lead to undefined behavior
-
-```
+    ```cpp
+    Day invalid = static_cast<Day>(999); // Compiles but may lead to undefined behavior
+    
+    ```
 
 
 10. **Best Practices**:
@@ -142,6 +247,38 @@ Day invalid = static_cast<Day>(999); // Compiles but may lead to undefined behav
 
 ### Example in Action
 
+:::tabs
+@tab Unscoped enum
+```cpp
+#include <iostream>
+
+enum Day
+{
+    Monday = 1,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday
+};
+
+int main()
+{
+    Day today = Wednesday;
+    std::cout << "Today is (Value: " << today << ")" << std::endl; 
+
+    // Check if value is valid (Requires manual check)
+    int input = 2;
+    if (input >= 1 && input <= 7)
+    {
+        Day day = static_cast<Day>(input);
+        std::cout << "Day from input: " << day << std::endl;
+    }
+    return 0;
+}
+```
+@tab Scoped enum
 ```cpp
 #include <iostream>
 
@@ -159,19 +296,19 @@ enum class Day
 int main()
 {
     Day today = Day::Wednesday;
-    std::cout << "Today is (Value: " << static_cast<int>(today) << ")" << std::endl;
+    std::cout << "Today is (Value: " << static_cast<int>(today) << ")" << std::endl; 
 
     // Check if value is valid (Requires manual check)
     int input = 2;
     if (input >= 1 && input <= 7)
     {
-        Day day {input};
+        Day day = static_cast<Day>(input);
         std::cout << "Day from input: " << static_cast<int>(day) << std::endl;
     }
     return 0;
 }
-
 ```
+:::
 
 ### When to Use Enums
 
@@ -190,15 +327,25 @@ By convention, flags name should be in plural.
 
 ### Declaration
 
+:::tabs
+@tab Unscoped enum
 ```cpp
 enum Elements : uint8_t { None = 0, Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
 // Fire = 1, Water = 2, Earth = 4
 ```
+@tab Scoped enum
+```cpp
+enum class Elements : uint8_t { None = 0, Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
+// Fire = 1, Water = 2, Earth = 4
+```
+:::
 
 ### Set
 
-There are four ways to set the same bits of a variable:
+There are five ways to set the same bits of a variable:
 
+:::tabs
+@tab Unscoped enum
 ```cpp
 Elements elements {Elements(Fire | Water)};
 Elements elements = static_cast<Elements>(Fire | Water);
@@ -206,14 +353,22 @@ Elements elements = static_cast<Elements>(3);
 Elements elements = static_cast<Elements>(1<<0 | 1<<1);
 Elements elements = static_cast<Elements>(0b011);
 ```
+@tab Scoped enum
+```cpp
+Elements elements {static_cast<Elements>(static_cast<uint8_t>(Elements::Fire) | static_cast<uint8_t>(Elements::Water))};
+Elements elements = static_cast<Elements>(static_cast<uint8_t>(Elements::Fire) | static_cast<uint8_t>(Elements::Water));
+Elements elements = static_cast<Elements>(3);
+Elements elements = static_cast<Elements>((1 << 0) | (1 << 1));
+Elements elements = static_cast<Elements>(0b011);
+```
+:::
 
 ### Get
 
-There are three ways to get the bits set in a variable:
+There is one way to get the bits set in a variable:
 
 ```cpp
 std::cout << static_cast<int>(elements) << std::endl; // 3
-// Custom printing needed for "Fire, Water" output
 ```
 
 [!INFO]
@@ -225,6 +380,50 @@ When doing queries and comparing, static_cast(elements) must be used.
 * Bitwise operators (`|`, `&`, `^`, `~`) are used to manipulate and compare flags.
 * Common comparison tasks include checking if a specific flag is set, if all flags in a mask are set, or if any flags match.
 
+
+:::tabs
+@tab Unscoped enum
+```cpp
+#include <iostream>
+
+enum Sumer { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
+
+int main()
+{
+    // Four different ways to set the same bits
+    Sumer capitals = (Sumer)(Uruk | Kish);
+    capitals = (Sumer)6; // You can also use capitals = static_cast<Sumer>(6);
+    capitals = (Sumer)(1<<1 | 1<<2);
+    capitals = (Sumer)0b00110;
+    
+    // How to query using bitmasks
+    Sumer target = (Sumer)0b11011;   // Ur, Uruk, Adab, Lagash
+    Sumer current = (Sumer)0b01110;  // Uruk, Kish, Adab
+
+    // Unscoped enums convert implicitly to int, so casting is optional for output
+    std::cout << target << std::endl;                   // 27 (11011) <- target bits to achieve
+    std::cout << current << std::endl;                  // 14 (01110) <- current bits
+    std::cout << (current & target) << std::endl;       // 10 (01010) <- target bits achieved
+    std::cout << (target & ~current) << std::endl;      // 17 (10001) <- remaining target bits to achieve
+    std::cout << ((current & target) ^ current) << std::endl; // 4 (00100) - other
+
+    // Comparison logic
+    // Unscoped enums allow direct bitwise operations without casting
+    if ((current & target) == current) {
+        std::cout << "Exact match. Target achieved!" << std::endl;
+    }
+    else if ((current | target) == current) {
+        std::cout << "Target achieved!" << std::endl;
+    }
+    else {
+        std::cout << "Target not achieved!" << std::endl;
+        std::cout << (target & ~current) << " missing" << std::endl;
+    }
+
+    return 0;
+}
+```
+@tab Scoped enum
 ```cpp
 #include <iostream>
 #include <bitset>
@@ -235,7 +434,7 @@ int main()
 {
     // Four different ways to set the same bits
     Sumer capitals = static_cast<Sumer>(static_cast<int>(Sumer::Uruk) | static_cast<int>(Sumer::Kish));
-    capitals = static_cast<Sumer>(6);
+    capitals = static_cast<Sumer>(6); // Also you can use capitals = (Sumer)(6);
     capitals = static_cast<Sumer>(1<<1 | 1<<2);
     capitals = static_cast<Sumer>(0b00110);
 
@@ -264,6 +463,7 @@ int main()
     return 0;
 }
 ```
+:::
 
 ## Comparison Patterns
 
@@ -271,6 +471,24 @@ int main()
 
 Here’s how to perform common comparisons with bitmasks in C++.
 
+:::tabs
+@tab Unscoped enum
+```cpp
+enum Elements { Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
+
+int main()
+{
+    // Bitwise operations work directly without casts
+    Elements elements = (Elements)(Fire | Water);
+
+    // Using bitwise `&`, equality operator `==`
+    bool isFire = (elements & Fire) == Fire;
+    
+    // Using bitwise `&`, equality operator `!= 0`
+    bool isFireAny = (elements & Fire) != 0;
+}
+```
+@tab Scoped enum
 ```cpp
 enum class Elements : int { Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
 
@@ -285,9 +503,20 @@ int main()
     bool isFireAny = (static_cast<int>(elements) & static_cast<int>(Elements::Fire)) != 0;
 }
 ```
+:::
 
 #### 1. **Check if a Specific Flag is Set**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+enum Permissions { None = 0, Read = 1, Write = 2, Execute = 4, Delete = 8 };
+
+Permissions userPermissions = (Permissions)(Read | Write);
+
+bool canWrite = (userPermissions & Write) == Write;
+```
+@tab Scoped enum
 ```cpp
 enum class Permissions : int { None = 0, Read = 1, Write = 2, Execute = 4, Delete = 8 };
 
@@ -296,37 +525,83 @@ Permissions userPermissions = static_cast<Permissions>(static_cast<int>(Permissi
 // Using bitwise AND
 bool canWrite = (static_cast<int>(userPermissions) & static_cast<int>(Permissions::Write)) == static_cast<int>(Permissions::Write);
 ```
+:::
 
 #### 2. **Check if All Flags in a Mask are Set**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+Permissions required = (Permissions)(Read | Execute);
+bool hasAll = (userPermissions & required) == required;
+```
+@tab Scoped enum
 ```cpp
 Permissions required = static_cast<Permissions>(static_cast<int>(Permissions::Read) | static_cast<int>(Permissions::Execute));
 bool hasAll = (static_cast<int>(userPermissions) & static_cast<int>(required)) == static_cast<int>(required);
 ```
+:::
 
 #### 3. **Check if Any Flag in a Mask is Set**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+Permissions check = (Permissions)(Write | Delete);
+bool hasAny = (userPermissions & check) != 0;
+```
+@tab Scoped enum
 ```cpp
 Permissions check = static_cast<Permissions>(static_cast<int>(Permissions::Write) | static_cast<int>(Permissions::Delete));
 bool hasAny = (static_cast<int>(userPermissions) & static_cast<int>(check)) != 0;
 ```
+:::
 
 #### 4. **Check if No Flags in a Mask are Set**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+Permissions forbidden = (Permissions)(Execute | Delete);
+bool hasNone = (userPermissions & forbidden) == 0;
+```
+@tab Scoped enum
 ```cpp
 Permissions forbidden = static_cast<Permissions>(static_cast<int>(Permissions::Execute) | static_cast<int>(Permissions::Delete));
 bool hasNone = (static_cast<int>(userPermissions) & static_cast<int>(forbidden)) == 0;
 ```
+:::
 
 #### 5. **Compare Exact Bitmask**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+Permissions expected = (Permissions)(Read | Write);
+bool isExactMatch = (userPermissions == expected);
+```
+@tab Scoped enum
 ```cpp
 Permissions expected = static_cast<Permissions>(static_cast<int>(Permissions::Read) | static_cast<int>(Permissions::Write));
 bool isExactMatch = userPermissions == expected;
 ```
+:::
 
 #### 6. **Toggle or Modify Flags**
 
+:::tabs
+@tab Unscoped enum
+```cpp
+// Add a flag
+userPermissions = (Permissions)(userPermissions | Execute);
+
+// Remove a flag
+userPermissions = (Permissions)(userPermissions & ~Write);
+
+// Toggle a flag
+userPermissions = (Permissions)(userPermissions ^ Read);
+```
+@tab Scoped enum
 ```cpp
 // Add a flag
 userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) | static_cast<int>(Permissions::Execute));
@@ -337,6 +612,8 @@ userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) & ~
 // Toggle a flag
 userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) ^ static_cast<int>(Permissions::Read));
 ```
+:::
+
 
 ### Best Practices
 
@@ -345,6 +622,51 @@ userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) ^ s
 
 ### Example: Comprehensive Comparison
 
+:::tabs
+@tab Unscoped enum
+```cpp
+#include <iostream>
+
+// 1. Unscoped enum (Implicitly converts to int)
+enum Permissions {
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Execute = 4,
+    Delete = 8
+};
+
+void CheckPermissions(Permissions userPermissions) {
+    std::cout << "Checking permissions..." << std::endl;
+
+    // Check individual flag (No casting needed)
+    bool canRead = (userPermissions & Read) == Read;
+    std::cout << "Can Read: " << (canRead ? "True" : "False") << std::endl;
+
+    // Check all flags in mask
+    Permissions required = (Permissions)(Read | Write);
+    bool hasAll = (userPermissions & required) == required;
+    std::cout << "Has Read and Write: " << (hasAll ? "True" : "False") << std::endl;
+
+    // Check any flag in mask
+    Permissions check = (Permissions)(Execute | Delete);
+    bool hasAny = (userPermissions & check) != None;
+    std::cout << "Has Execute or Delete: " << (hasAny ? "True" : "False") << std::endl;
+
+    // Check exact match
+    Permissions expected = (Permissions)(Read | Write);
+    bool isExactMatch = (userPermissions == expected);
+    std::cout << "Exact match for Read|Write: " << (isExactMatch ? "True" : "False") << std::endl;
+}
+
+int main() {
+    // Combine flags simply
+    Permissions perms = (Permissions)(Read | Write);
+    CheckPermissions(perms);
+    return 0;
+}
+```
+@tab Scoped enum
 ```cpp
 #include <iostream>
 
@@ -396,6 +718,7 @@ int main() {
     return 0;
 }
 ```
+:::
 
 ##### Output
 
@@ -411,7 +734,7 @@ cheo@hal:~/code/cplus/enums$
 ### From `int` to binary
 
 ```cpp
-// #include <bitset>
+#include <bitset>
 
 int element = 4;
 std::cout << element << ": " << std::bitset<3>(element) << std::endl; // prints 100

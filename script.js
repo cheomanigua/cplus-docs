@@ -21,13 +21,24 @@ async function loadDoc() {
         
         let text = await response.text();
 
-        // 1. Process Custom Callouts ([!INFO], [!TIP], etc.)
+        // 1a. Process Custom Callouts
         text = parseCallouts(text);
 
-        // 2. Render Markdown to HTML
+        // 1b. Process Custom Tabbing (Stores content for later safe rendering)
+        text = parseTabs(text);
+
+        // 2. Render Main Markdown to HTML
         contentArea.innerHTML = (typeof marked.parse === 'function') 
             ? marked.parse(text) 
             : marked.marked(text);
+
+        // 2b. Inject and render the tab contents safely to prevent mangling
+        window.tabContents.forEach(tab => {
+            const el = document.getElementById(tab.id);
+            if (el) {
+                el.innerHTML = marked.parse(tab.content);
+            }
+        });
 
         // 3. Fix Mermaid Diagrams
         const mermaidBlocks = contentArea.querySelectorAll('pre code.language-mermaid');
@@ -52,6 +63,7 @@ async function loadDoc() {
         }
 
         // 5. Update UI Components
+        initializeTabs(contentArea);
         generateToC(contentArea);
         updateSidebarLinks(page);
 
@@ -66,15 +78,40 @@ async function loadDoc() {
     }
 }
 
-// Helper to handle smooth scrolling to an ID
-function scrollToAnchor(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        // Small delay ensures Mermaid/Prism layout shifts are finished
-        setTimeout(() => {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }, 150);
-    }
+function parseTabs(text) {
+    const tabsRegex = /:::tabs\s*([\s\S]*?):::/g;
+    window.tabContents = []; 
+
+    return text.replace(tabsRegex, (_, body) => {
+        const parts = body.split(/^@tab\s+/gm).filter(Boolean);
+
+        let buttons = "";
+        let contents = "";
+
+        parts.forEach((part, index) => {
+            const lines = part.split("\n");
+            const title = lines.shift().trim();
+            const content = lines.join("\n");
+            
+            const tabId = `tab-${Math.random().toString(36).substr(2, 9)}`;
+            window.tabContents.push({ id: tabId, content: content });
+
+            buttons += `
+<button class="tab-button ${index === 0 ? "active" : ""}" data-tab="${index}">
+    ${title}
+</button>`;
+
+            contents += `<div class="tab-content ${index === 0 ? "active" : ""}" id="${tabId}"></div>`;
+        });
+
+        return `
+<div class="tabs">
+    <div class="tab-buttons">
+        ${buttons}
+    </div>
+    ${contents}
+</div>`;
+    });
 }
 
 function parseCallouts(text) {
@@ -84,6 +121,27 @@ function parseCallouts(text) {
         const lowerType = type.toLowerCase();
         const cleanContent = content.trim().replace(/\n/g, '<br>');
         return `<div class="callout ${lowerType}">${cleanContent}</div>`;
+    });
+}
+
+function initializeTabs(container) {
+    container.querySelectorAll(".tabs").forEach(tabSet => {
+        const buttons = tabSet.querySelectorAll(".tab-button");
+        const contents = tabSet.querySelectorAll(".tab-content");
+
+        buttons.forEach((button, index) => {
+            button.addEventListener("click", () => {
+                buttons.forEach(b => b.classList.remove("active"));
+                contents.forEach(c => c.classList.remove("active"));
+
+                button.classList.add("active");
+                contents[index].classList.add("active");
+
+                if (window.Prism) {
+                    Prism.highlightAllUnder(contents[index]);
+                }
+            });
+        });
     });
 }
 
@@ -102,7 +160,6 @@ function generateToC(container) {
         const li = document.createElement('li');
         const a = document.createElement('a');
         
-        // TOC links keep the page context to prevent routing issues
         const pagePart = window.location.hash.replace('#', '').split('#')[0] || 'enums_flags';
         a.href = `#${pagePart}#${id}`;
         a.innerText = header.innerText;
@@ -127,24 +184,29 @@ function updateSidebarLinks(currentPage) {
     });
 }
 
-// Event Listeners
+function scrollToAnchor(id) {
+    const element = document.getElementById(id);
+    if (element) {
+        setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+    }
+}
+
 window.addEventListener('hashchange', () => {
     const fullHash = window.location.hash.replace('#', '');
     const hashParts = fullHash.split('#');
     const newPage = hashParts[0] || 'enums_flags';
     const anchorId = hashParts[1];
 
-    // Only reload the file if the page part of the hash has actually changed
     if (window.lastLoadedPage !== newPage) {
         window.lastLoadedPage = newPage;
         loadDoc();
     } else if (anchorId) {
-        // If on the same page, just scroll to the target
         scrollToAnchor(anchorId);
     }
 });
 
-// Click interceptor to handle re-clicking the exact same anchor URL
 document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (link && link.getAttribute('href') && link.getAttribute('href').startsWith('#')) {
