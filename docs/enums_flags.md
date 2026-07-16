@@ -1,10 +1,23 @@
 # Enums and Flags
 
-# Enums
+# Enumerations
 
-In C++, an **enum** is a user-defined type that defines a set of named constants representing integral values. In modern C++, **`enum class`** (scoped enums) is preferred to create readable, type-safe code when a variable can only take one of a predefined set of values.
+In C++, an **enumeration** is a user-defined type that defines a set of named constants representing integral values. In modern C++, **`enum class`** (scoped enums) is preferred to create readable, type-safe code when a variable can only take one of a predefined set of values.
 
+[!INFO]
 By convention, enum name should be in singular.
+
+There are to types of enumeration: Unscoped enumeration and Scoped enumeration (Enum Class). Modern C++ recommends using Scoped enumeration. However, I find it cumbersome and if your use of enums is limited, Unscoped enums are cleaner and simplier.
+
+## Unscoped Enum
+
+They will implicitly convert to integers, and the enumerators are placed into the scope region where the enumeration is defined.
+
+
+## Scoped Enum (Enum Class)
+
+Scoped enumerations work similarly to unscoped enumerations, but have two primary differences: They won’t implicitly convert to integers, and the enumerators are only placed into the scope region of the enumeration (not into the scope region where the enumeration is defined).
+
 
 ### Key Points About C++ Enums
 
@@ -16,7 +29,6 @@ enum class EnumName
     Value2,  // Implicitly assigned 1
     Value3   // Implicitly assigned 2
 };
-
 ```
 
 
@@ -30,10 +42,7 @@ enum class Day : uint8_t
     Tuesday = 2,
     Wednesday = 3
 };
-
 ```
-
-
 
 
 3. **Explicit Values**:
@@ -46,10 +55,7 @@ enum class ErrorCode
     NotFound = 404,
     ServerError = 500
 };
-
 ```
-
-
 
 
 4. **Usage**:
@@ -61,10 +67,7 @@ if (today == Day::Monday)
 {
     std::cout << "It's Monday!" << std::endl;
 }
-
 ```
-
-
 
 
 5. **Enum Operations**:
@@ -72,16 +75,13 @@ if (today == Day::Monday)
 ```cpp
 // Requires custom implementation
 std::cout << DayToString(Day::Monday) << std::endl; // Outputs: Monday
-
 ```
 
 
 * **Parse**: C++ does not have a built-in `Parse()`. You must implement a helper to convert a string to an enum value.
 ```cpp
 Day day = StringToDay("Tuesday");
-
 ```
-
 
 * **Iterating**: There is no built-in `GetValues()`. You must manually define a collection or use a library like `magic_enum`.
 
@@ -98,10 +98,7 @@ enum class Permissions : uint8_t
     Delete = 4
 };
 // Manually implement bitwise operators
-
 ```
-
-
 
 
 7. **Common Practices**:
@@ -118,10 +115,7 @@ switch (today)
         std::cout << "Not Monday." << std::endl;
         break;
 }
-
 ```
-
-
 
 
 8. **Limitations**:
@@ -137,8 +131,6 @@ switch (today)
 Day invalid = static_cast<Day>(999); // Compiles but may lead to undefined behavior
 
 ```
-
-
 
 
 10. **Best Practices**:
@@ -167,13 +159,13 @@ enum class Day
 int main()
 {
     Day today = Day::Wednesday;
-    std::cout << "Today is (Value: " << static_cast<int>(today) << ")" << std::endl; 
+    std::cout << "Today is (Value: " << static_cast<int>(today) << ")" << std::endl;
 
     // Check if value is valid (Requires manual check)
     int input = 2;
     if (input >= 1 && input <= 7)
     {
-        Day day = static_cast<Day>(input);
+        Day day {input};
         std::cout << "Day from input: " << static_cast<int>(day) << std::endl;
     }
     return 0;
@@ -199,9 +191,8 @@ By convention, flags name should be in plural.
 ### Declaration
 
 ```cpp
-enum class Elements : uint8_t { None = 0, Fire = 1<<0, Water = 1<<1, Earth = 1<<2 }; 
+enum Elements : uint8_t { None = 0, Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
 // Fire = 1, Water = 2, Earth = 4
-
 ```
 
 ### Set
@@ -209,11 +200,11 @@ enum class Elements : uint8_t { None = 0, Fire = 1<<0, Water = 1<<1, Earth = 1<<
 There are four ways to set the same bits of a variable:
 
 ```cpp
-Elements elements = static_cast<Elements>(static_cast<int>(Elements::Fire) | static_cast<int>(Elements::Water)); 
-elements = static_cast<Elements>(3);
-elements = static_cast<Elements>(1<<0 | 1<<1);
-elements = static_cast<Elements>(0b011);
-
+Elements elements {Elements(Fire | Water)};
+Elements elements = static_cast<Elements>(Fire | Water);
+Elements elements = static_cast<Elements>(3);
+Elements elements = static_cast<Elements>(1<<0 | 1<<1);
+Elements elements = static_cast<Elements>(0b011);
 ```
 
 ### Get
@@ -223,7 +214,6 @@ There are three ways to get the bits set in a variable:
 ```cpp
 std::cout << static_cast<int>(elements) << std::endl; // 3
 // Custom printing needed for "Fire, Water" output
-
 ```
 
 [!INFO]
@@ -294,7 +284,6 @@ int main()
     // Using bitwise `&`, equality operator `!= 0`
     bool isFireAny = (static_cast<int>(elements) & static_cast<int>(Elements::Fire)) != 0;
 }
-
 ```
 
 #### 1. **Check if a Specific Flag is Set**
@@ -306,7 +295,6 @@ Permissions userPermissions = static_cast<Permissions>(static_cast<int>(Permissi
 
 // Using bitwise AND
 bool canWrite = (static_cast<int>(userPermissions) & static_cast<int>(Permissions::Write)) == static_cast<int>(Permissions::Write);
-
 ```
 
 #### 2. **Check if All Flags in a Mask are Set**
@@ -314,7 +302,6 @@ bool canWrite = (static_cast<int>(userPermissions) & static_cast<int>(Permission
 ```cpp
 Permissions required = static_cast<Permissions>(static_cast<int>(Permissions::Read) | static_cast<int>(Permissions::Execute));
 bool hasAll = (static_cast<int>(userPermissions) & static_cast<int>(required)) == static_cast<int>(required);
-
 ```
 
 #### 3. **Check if Any Flag in a Mask is Set**
@@ -322,7 +309,6 @@ bool hasAll = (static_cast<int>(userPermissions) & static_cast<int>(required)) =
 ```cpp
 Permissions check = static_cast<Permissions>(static_cast<int>(Permissions::Write) | static_cast<int>(Permissions::Delete));
 bool hasAny = (static_cast<int>(userPermissions) & static_cast<int>(check)) != 0;
-
 ```
 
 #### 4. **Check if No Flags in a Mask are Set**
@@ -330,7 +316,6 @@ bool hasAny = (static_cast<int>(userPermissions) & static_cast<int>(check)) != 0
 ```cpp
 Permissions forbidden = static_cast<Permissions>(static_cast<int>(Permissions::Execute) | static_cast<int>(Permissions::Delete));
 bool hasNone = (static_cast<int>(userPermissions) & static_cast<int>(forbidden)) == 0;
-
 ```
 
 #### 5. **Compare Exact Bitmask**
@@ -338,7 +323,6 @@ bool hasNone = (static_cast<int>(userPermissions) & static_cast<int>(forbidden))
 ```cpp
 Permissions expected = static_cast<Permissions>(static_cast<int>(Permissions::Read) | static_cast<int>(Permissions::Write));
 bool isExactMatch = userPermissions == expected;
-
 ```
 
 #### 6. **Toggle or Modify Flags**
@@ -352,7 +336,6 @@ userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) & ~
 
 // Toggle a flag
 userPermissions = static_cast<Permissions>(static_cast<int>(userPermissions) ^ static_cast<int>(Permissions::Read));
-
 ```
 
 ### Best Practices
@@ -504,7 +487,6 @@ In your `GetItem(int id)` method, you perform a **Fail-Fast** check:
 
 ```cpp
 if ((id & EntityMasks::TYPE_MASK) != EntityMasks::ITEM_MASK) return nullptr;
-
 ```
 
 * **The Operation**: You use the bitwise `&` (AND) operator to extract the category bits of the `id`.
