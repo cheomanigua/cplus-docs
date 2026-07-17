@@ -230,12 +230,26 @@ switch (today)
 
 
 9. **Type Safety**:
+
 * `enum class` prevents implicit conversion to `int`, enforcing type safety.
 * Casting an invalid integer to an enum is possible using `static_cast` and may cause undefined behavior if not careful:
+
     ```cpp
-    Day invalid = static_cast<Day>(999); // Compiles but may lead to undefined behavior
-    
+    Day valid = static_cast<Day>(3);     // Valid integer. Compiles and it is in range within week days
+    Day invalid = static_cast<Day>(999); // Invalid integer. Compiles but may lead to undefined behavior
     ```
+
+    You can also use these casts:
+    ```cpp
+    Day valid = {Day(3)}; // Functional style, less safe
+    Day valid = (Day)(3); // C-style cast, much less safe
+    ```
+
+    | Syntax | Style | Safety/Visibility |
+    | --- | --- | --- |
+    | `static_cast<Day>(input)` | The "Professional" Choice | Highest; makes the intent and the risk explicit. |
+    | `{Day(input)}` | Functional-style | Medium; cleaner, but masks the underlying conversion. |
+    | `(Day)(input)` | C-style | Lowest; dangerous, easy to overlook. |
 
 
 10. **Best Practices**:
@@ -390,15 +404,21 @@ enum Sumer { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
 
 int main()
 {
-    // Four different ways to set the same bits
-    Sumer capitals = (Sumer)(Uruk | Kish);
-    capitals = (Sumer)6; // You can also use capitals = static_cast<Sumer>(6);
-    capitals = (Sumer)(1<<1 | 1<<2);
-    capitals = (Sumer)0b00110;
+    // There are different ways to set one bit
+    Sumer capital = Uruk;
+    capital = static_cast<Sumer>(3);
+    capital = static_cast<Sumer>(1<<3);
+    capital = static_cast<Sumer>(0b01000);
+
+    // There are different ways to set several bits
+    Sumer cities = static_cast<Sumer>(Ur | Kish);
+    cities = static_cast<Sumer>(5);
+    cities = static_cast<Sumer>(1<<0 | 1<<2);
+    cities = static_cast<Sumer>(0b00101);
     
     // How to query using bitmasks
-    Sumer target = (Sumer)0b11011;   // Ur, Uruk, Adab, Lagash
-    Sumer current = (Sumer)0b01110;  // Uruk, Kish, Adab
+    Sumer target = static_cast<Sumer>(0b11011);   // Ur, Uruk, Adab, Lagash
+    Sumer current = static_cast<Sumer>(0b01110);  // Uruk, Kish, Adab
 
     // Unscoped enums convert implicitly to int, so casting is optional for output
     std::cout << target << std::endl;                   // 27 (11011) <- target bits to achieve
@@ -426,29 +446,36 @@ int main()
 @tab Scoped enum
 ```cpp
 #include <iostream>
-#include <bitset>
 
 enum class Sumer : int { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
 
 int main()
 {
-    // Four different ways to set the same bits
-    Sumer capitals = static_cast<Sumer>(static_cast<int>(Sumer::Uruk) | static_cast<int>(Sumer::Kish));
-    capitals = static_cast<Sumer>(6); // Also you can use capitals = (Sumer)(6);
-    capitals = static_cast<Sumer>(1<<1 | 1<<2);
-    capitals = static_cast<Sumer>(0b00110);
+    // There are different ways to set one bit
+    Sumer capital = Sumer::Uruk;
+    capital = static_cast<Sumer>(3);
+    capital = static_cast<Sumer>(1<<3);
+    capital = static_cast<Sumer>(0b01000);
 
+    // There are different ways to set several bits
+    Sumer cities = static_cast<Sumer>(static_cast<int>(Sumer::Ur) | static_cast<int>(Sumer::Kish));
+    cities = static_cast<Sumer>(5);
+    cities = static_cast<Sumer>(1<<0 | 1<<2);
+    cities = static_cast<Sumer>(0b00101);
+    
     // How to query using bitmasks
-    Sumer target = static_cast<Sumer>(0b11011);    // Ur, Uruk, Adab, Lagash
-    Sumer current = static_cast<Sumer>(0b01110);   // Uruk, Kish, Adab
+    Sumer target = static_cast<Sumer>(0b11011);   // Ur, Uruk, Adab, Lagash
+    Sumer current = static_cast<Sumer>(0b01110);  // Uruk, Kish, Adab
 
-    std::cout << static_cast<int>(target) << std::endl;                                   // 11011 <- target bits to achieve
-    std::cout << static_cast<int>(current) << std::endl;                                  // 01110 <- current bits
-    std::cout << (static_cast<int>(current) & static_cast<int>(target)) << std::endl;     // 01010 <- target bits achieved
-    std::cout << (static_cast<int>(target) & ~static_cast<int>(current)) << std::endl;    // 10001 <- remaining target bits to achieve
-    std::cout << ((static_cast<int>(current) & static_cast<int>(target)) ^ static_cast<int>(current)) << std::endl; // 00100 <- other
+    // Scoped enums do not convert to int, so casting is required for output/math
+    std::cout << static_cast<int>(target) << std::endl;                                      // 27 (11011) <- target bits to achieve
+    std::cout << static_cast<int>(current) << std::endl;                                     // 14 (01110) <- current bits
+    std::cout << (static_cast<int>(current) & static_cast<int>(target)) << std::endl;        // 10 (01010) <- target bits achieved
+    std::cout << (static_cast<int>(target) & ~static_cast<int>(current)) << std::endl;       // 17 (10001) <- remaining target bits to achieve
+    std::cout << ((static_cast<int>(current) & static_cast<int>(target)) ^ static_cast<int>(current)) << std::endl; // 4 (00100) - other
 
     // Comparison logic
+    // We cast to int for bitwise operations and comparisons
     if ((static_cast<int>(current) & static_cast<int>(target)) == static_cast<int>(current)) {
         std::cout << "Exact match. Target achieved!" << std::endl;
     }
