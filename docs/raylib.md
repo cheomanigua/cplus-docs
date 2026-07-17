@@ -93,6 +93,9 @@ while (!WindowShouldClose()) {
 
 ## Point and click
 
+[!INFO]
+In the examples below, <code>ussPasadena</code> and <code>destination</code> are <code>Vector2</code>
+
 ### Vector2MoveTowards
 
 ```cpp
@@ -108,16 +111,15 @@ if (isMoving) {
 ```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
-    Vector2 pos = {ussPasadenaPos.x, ussPasadenaPos.y};
-    Vector2 dir = Vector2Subtract(destination, pos);
+    Vector2 dir = Vector2Subtract(destination, ussPasadena);
     float dist = Vector2Length(dir);
     
     if (dist > 2.0f) {
-        dir = Vector2Scale(Vector2Normalize(dir), movementSpeed * deltaTime);
-        ussPasadenaPos.x += dir.x;
-        ussPasadenaPos.y += dir.y;
+        Vector2 movement = Vector2Scale(Vector2Normalize(dir), movementSpeed * deltaTime);
+        ussPasadena = Vector2Add(ussPasadena, movement);
     } else {
         isMoving = false;
+        ussPasadena = destination; // Snap to final position[cite: 1]
     }
 }
 ```
@@ -127,32 +129,35 @@ if (isMoving) {
 ```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
-  // 0.1f is the interpolation factor (tweak this for speed)
-  // A value of 0.1f means "move 10% of the remaining distance per frame"
-  float t = 0.1f - exp(-movementSpeed * deltaTime);
-  ussPasadenaPos.x = Lerp(ussPasadenaPos.x, destination.x, t);
-  ussPasadenaPos.y = Lerp(ussPasadenaPos.y, destination.y, t);
+    // 0.1f is the interpolation factor (tweak this for speed)
+    // A value of 0.1f means "move 10% of the remaining distance per frame"
+    float t = 0.1f - exp(-movementSpeed * deltaTime);
+    
+    ussPasadena = Vector2Lerp(ussPasadena, destination, t);
 
-  // Stop moving if close enough
-  if (CheckCollisionPointCircle({ussPasadenaPos.x, ussPasadenaPos.y}, destination, 2.0f)) {
-      isMoving = false;
-  }
+    if (Vector2Distance(ussPasadena, destination) < 2.0f) {
+        isMoving = false;
+        ussPasadena = destination; // Optional: snap to exact target
+    }
 }
 ```
+
+[!INFO]
+In the example below, <code>ussPasadena</code> and <code>destination</code> are <code>Structs</code>
 
 ### Custom
 
 ```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
-    float dx = destination.x - ussPasadenaPos.x;
-    float dy = destination.y - ussPasadenaPos.y;
+    float dx = destination.x - ussPasadena.x;
+    float dy = destination.y - ussPasadena.y;
     float distance = std::sqrt(dx * dx + dy * dy);
 
     if (distance > 2.0f) { // Stop if close enough
         // Normalize and move
-        ussPasadenaPos.x += (dx / distance) * movementSpeed * deltaTime;
-        ussPasadenaPos.y += (dy / distance) * movementSpeed * deltaTime;
+        ussPasadena.x += (dx / distance) * movementSpeed * deltaTime;
+        ussPasadena.y += (dy / distance) * movementSpeed * deltaTime;
 
     } else {
         isMoving = false;
@@ -166,6 +171,9 @@ if (isMoving) {
 
 ## Point in Circle
 
+[!INFO]
+In the example below, <code>sourcePos</code> and <code>targetPos</code> are <code>Vector2</code>
+
 ### Raylib
 
 ```cpp
@@ -176,14 +184,18 @@ class RadarSystem {
                                    const SensorComp& radar) {
         if (!radar.isEnabled) return false;
 
+        // Directly pass the Vector2 member
         return CheckCollisionPointCircle(
-            {targetPos.x, targetPos.y}, 
-            {sourcePos.x, sourcePos.y}, 
+            targetPos, 
+            sourcePos, 
             radar.range
         );
     }
 };
 ```
+
+[!INFO]
+In the example below, <code>sourcePos</code> and <code>targetPos</code> are <code>Structs</code>
 
 ### Custom
 
