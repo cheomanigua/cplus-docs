@@ -229,27 +229,34 @@ switch (today)
 * `enum class` enums are stored as their underlying type.
 
 
-9. **Type Safety**:
+9. **Casting and Type Safety**:
 
 * `enum class` prevents implicit conversion to `int`, enforcing type safety.
-* Casting an invalid integer to an enum is possible using `static_cast` and may cause undefined behavior if not careful:
+* Casting an integer to an enum is possible using `static_cast`:
 
     ```cpp
-    Day valid = static_cast<Day>(3);     // Valid integer. Compiles and it is in range within week days
-    Day invalid = static_cast<Day>(999); // Invalid integer. Compiles but may lead to undefined behavior
+    Day valid = static_cast<Day>(3); // C++ style, recommended
     ```
 
     You can also use these casts:
     ```cpp
-    Day valid = {Day(3)}; // Functional style, less safe
+    Day valid {Day(3)};   // Uniform style, less safe, no assignment symbol needed
+    Day valid = Day(3);   // Functional style, less safe
     Day valid = (Day)(3); // C-style cast, much less safe
     ```
 
-    | Syntax | Style | Safety/Visibility |
+    | Syntax | Cast Style | Safety/Visibility |
     | --- | --- | --- |
-    | `static_cast<Day>(input)` | The "Professional" Choice | Highest; makes the intent and the risk explicit. |
-    | `{Day(input)}` | Functional-style | Medium; cleaner, but masks the underlying conversion. |
-    | `(Day)(input)` | C-style | Lowest; dangerous, easy to overlook. |
+    | `static_cast<Day>(input)` | C++ style | Highest; makes the intent and the risk explicit. |
+    | `{Day(input)}` | Uniform style | Medium; concise, safe from narrowing, but still 'Functional'. |
+    | `Day(input)` | Functional style | Medium; cleaner, but masks the underlaying conversion. |
+    | `(Day)(input)` | C style | Lowest; dangerous, easy to overlook. |
+
+* Casting an invalid integer to an enum is possible using `static_cast` and may cause undefined behavior if not careful:
+
+    ```cpp
+    Day invalid = static_cast<Day>(999); // Invalid integer (out of bounds). Compiles but may lead to undefined behavior
+    ```
 
 
 10. **Best Practices**:
@@ -404,14 +411,31 @@ enum Sumer { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
 
 int main()
 {
+    
+    //
     // There are different ways to set one bit
-    Sumer capital = Uruk;
-    capital = static_cast<Sumer>(3);
-    capital = static_cast<Sumer>(1<<3);
-    capital = static_cast<Sumer>(0b01000);
+    //
 
+    // Only initialization allowed
+    Sumer capital {Sumer(Uruk)};
+    Sumer capital = Sumer(Uruk);
+
+    // Initialization and assigment allowed
+    capital = Uruk;
+    capital = static_cast<Sumer>(2);
+    capital = static_cast<Sumer>(1<<2);
+    capital = static_cast<Sumer>(0b00010);
+
+    //
     // There are different ways to set several bits
-    Sumer cities = static_cast<Sumer>(Ur | Kish);
+    //
+
+    // Only initialization allowed
+    Sumer cities {Sumer(Ur | Kish)};
+    Sumer cities = Sumer(Ur | Kish);
+
+    // Initialization and assigment allowed
+    cities = static_cast<Sumer>(Ur | Kish);
     cities = static_cast<Sumer>(5);
     cities = static_cast<Sumer>(1<<0 | 1<<2);
     cities = static_cast<Sumer>(0b00101);
