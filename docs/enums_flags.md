@@ -157,18 +157,13 @@ if (today == Day::Monday)
 ```
 :::
 
-### 5. Initialization / Assigment
+### 5. Initialization / Assignment
 
-The expressions shown in the table below can be used both for initialization:
-
-```cpp
-Day day {expression};
-```
-
-and for assignment:
+The expressions shown in the table below can be used both for initialization and assignment:
 
 ```cpp
-day = expression;
+Day day {expression}; // Initialization
+day = expression;     // Assignment
 ```
 
 | Expression            | Enum type             | Preferred?                           |
@@ -389,7 +384,7 @@ enum class Day
 
 int main()
 {
-    Day today = Day::Wednesday;
+    Day today {Day::Wednesday};
     std::cout << "Today is (Value: " << static_cast<int>(today) << ")" << std::endl; 
 
     // Check if value is valid (Requires manual check)
@@ -436,48 +431,44 @@ enum class Sumer : uint8_t { None = 0, Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2 };
 
 ### Set
 
-There are five ways to set the same bits of a variable:
+There are several ways to set (initialize or assign) the bits of a variable. The expressions shown below can be used both for initialization and assignment:
+
+```cpp
+Sumer cities {expression}; // Initialization
+cities = expression;       // Assignment
+```
 
 :::tabs
 @tab Unscoped flag
 ```cpp
-Sumer cities {Sumer(Ur | Uruk)};
-Sumer cities = static_cast<Sumer>(Ur | Uruk);
-Sumer cities = static_cast<Sumer>(3);
-Sumer cities = static_cast<Sumer>(1<<0 | 1<<1);
-Sumer cities = static_cast<Sumer>(0b011);
+// Expressions
+Sumer(Ur | Uruk);
+static_cast<Sumer>(Ur | Uruk);
+static_cast<Sumer>(3);
+static_cast<Sumer>(1<<0 | 1<<1);
+static_cast<Sumer>(0b011);
 ```
 @tab Scoped flag
 ```cpp
-Sumer cities {static_cast<Sumer>(static_cast<uint8_t>(Sumer::Ur) | static_cast<uint8_t>(Sumer::Uruk))};
-Sumer cities = static_cast<Sumer>(static_cast<uint8_t>(Sumer::Ur) | static_cast<uint8_t>(Sumer::Uruk));
-Sumer cities = static_cast<Sumer>(3);
-Sumer cities = static_cast<Sumer>((1 << 0) | (1 << 1));
-Sumer cities = static_cast<Sumer>(0b011);
+// Expressions
+static_cast<Sumer>(static_cast<uint8_t>(Sumer::Ur) | static_cast<uint8_t>(Sumer::Uruk));
+static_cast<Sumer>(3);
+static_cast<Sumer>((1 << 0) | (1 << 1));
+static_cast<Sumer>(0b011);
 ```
 :::
 
-The expressions shown in the table below can be used both for initialization:
-
-```cpp
-Smmer cities {expression};
-```
-
-and for assignment:
-
-```cpp
-cities = expression;
-```
+#### Comparison between expressions
 
 | Expression                                                                                         | Enum type | Compiles? | Preferred?                                     |
 | -------------------------------------------------------------------------------------------- | --------- | --------- | ---------------------------------------------- |
-| `static_cast<Sumer>(Uruk \| Adab)`                                                           | Unscoped  | ✅         | ⭐ Yes                                          |
-| `Sumer(Uruk \| Adab)`                                                                        | Unscoped  | ✅         | ✅ Acceptable                                   |
+| `static_cast<Sumer>(Ur \| Uruk)`                                                           | Unscoped  | ✅         | ⭐ Yes                                          |
+| `Sumer(Ur \| Uruk)`                                                                        | Unscoped  | ✅         | ✅ Acceptable                                   |
 | `static_cast<Sumer>(3)`                                                                      | Unscoped  | ✅         | Only if `3` comes from external data           |
-| `Sumer::Uruk \| Sumer::Adab`                                                                 | Scoped    | ❌         | No built-in `operator\|`                       |
-| `static_cast<Sumer>(Sumer::Uruk \| Sumer::Adab)`                                             | Scoped    | ❌         | No built-in `operator\|`                       |
+| `Sumer::Ur \| Sumer::Uruk`                                                                 | Scoped    | ❌         | No built-in `operator\|`                       |
+| `static_cast<Sumer>(Sumer::Ur \| Sumer::Uruk)`                                             | Scoped    | ❌         | No built-in `operator\|`                       |
 | `static_cast<Sumer>(3)`                                                                      | Scoped    | ✅         | Only if `3` comes from external data           |
-| `static_cast<Sumer>(static_cast<uint8_t>(Sumer::Uruk) \| static_cast<uint8_t>(Sumer::Adab))` | Scoped    | ✅         | ⭐ Yes (without overloading `operator\|`) |
+| `static_cast<Sumer>(static_cast<uint8_t>(Sumer::Ur) \| static_cast<uint8_t>(Sumer::Uruk))` | Scoped    | ✅         | ⭐ Yes (without overloading `operator\|`) |
 
 
 ### Get
@@ -512,34 +503,42 @@ int main()
     // There are different ways to set one bit
     //
 
-    // Only initialization allowed
-    Sumer capital {Sumer(Uruk)};
-    Sumer capital = Sumer(Uruk);
+    // Initialization
     Sumer capital {Uruk};
+    Sumer capital {Sumer(Uruk)};
+    Sumer capital {static_cast<Sumer>(2)};
+    Sumer capital {static_cast<Sumer>(1<<2)};
+    Sumer capital {static_cast<Sumer>(0b00010)};
 
-    // Initialization and assigment allowed
-    capital = Uruk;
+    // Assignment
+    capital = Uruk
+    capital = Sumer(Uruk);
     capital = static_cast<Sumer>(2);
     capital = static_cast<Sumer>(1<<2);
     capital = static_cast<Sumer>(0b00010);
+
 
     //
     // There are different ways to set several bits
     //
 
-    // Only initialization allowed
+    // Initialization
     Sumer cities {Sumer(Ur | Kish)};
-    Sumer cities = Sumer(Ur | Kish);
+    Sumer cities {static_cast<Sumer>(Ur | Kish)};
+    Sumer cities {static_cast<Sumer>(5)};
+    Sumer cities {static_cast<Sumer>(1<<0 | 1<<2)};
+    Sumer cities {static_cast<Sumer>(0b00101)};
 
-    // Initialization and assigment allowed
+    // Assignment
+    cities = Sumer(Ur | Kish);
     cities = static_cast<Sumer>(Ur | Kish);
     cities = static_cast<Sumer>(5);
     cities = static_cast<Sumer>(1<<0 | 1<<2);
     cities = static_cast<Sumer>(0b00101);
     
     // How to query using bitmasks
-    Sumer target = static_cast<Sumer>(0b11011);   // Ur, Uruk, Adab, Lagash
-    Sumer current = static_cast<Sumer>(0b01110);  // Uruk, Kish, Adab
+    Sumer target {static_cast<Sumer>(0b11011)};   // Ur, Uruk, Adab, Lagash
+    Sumer current {static_cast<Sumer>(0b01110)};  // Uruk, Kish, Adab
 
     // Unscoped enums convert implicitly to int, so casting is optional for output
     std::cout << target << std::endl;                   // 27 (11011) <- target bits to achieve
@@ -568,25 +567,46 @@ int main()
 ```cpp
 #include <iostream>
 
-enum class Sumer : int { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
+enum class Sumer { Ur = 1<<0, Uruk = 1<<1, Kish = 1<<2, Adab = 1<<3, Lagash = 1<<4 };
 
 int main()
 {
+    //
     // There are different ways to set one bit
-    Sumer capital = Sumer::Uruk;
-    capital = static_cast<Sumer>(3);
-    capital = static_cast<Sumer>(1<<3);
-    capital = static_cast<Sumer>(0b01000);
+    //
 
+    // Initialization
+    Sumer capital {Sumer::Uruk};
+    Sumer capital {static_cast<Sumer>(2)};
+    Sumer capital {static_cast<Sumer>(1 << 2)};
+    Sumer capital {static_cast<Sumer>(0b00010)};
+
+    // Assignment
+    capital = Sumer::Uruk;
+    capital = static_cast<Sumer>(2);
+    capital = static_cast<Sumer>(1 << 2);
+    capital = static_cast<Sumer>(0b00010);
+
+
+    //
     // There are different ways to set several bits
-    Sumer cities = static_cast<Sumer>(static_cast<int>(Sumer::Ur) | static_cast<int>(Sumer::Kish));
+    //
+
+    // Initialization
+    Sumer cities {static_cast<Sumer>(static_cast<int>(Sumer::Ur) | static_cast<int>(Sumer::Kish))};
+    Sumer cities {static_cast<Sumer>(5)};
+    Sumer cities {static_cast<Sumer>(1<<0 | 1<<2)};
+    Sumer cities {static_cast<Sumer>(0b00101)};
+
+    // Assignment
+    cities = static_cast<Sumer>(static_cast<int>(Sumer::Ur) | static_cast<int>(Sumer::Kish));
     cities = static_cast<Sumer>(5);
     cities = static_cast<Sumer>(1<<0 | 1<<2);
     cities = static_cast<Sumer>(0b00101);
     
     // How to query using bitmasks
-    Sumer target = static_cast<Sumer>(0b11011);   // Ur, Uruk, Adab, Lagash
-    Sumer current = static_cast<Sumer>(0b01110);  // Uruk, Kish, Adab
+    Sumer target {static_cast<Sumer>(0b11011)};   // Ur, Uruk, Adab, Lagash
+    Sumer current {static_cast<Sumer>(0b01110)};  // Uruk, Kish, Adab
 
     // Scoped enums do not convert to int, so casting is required for output/math
     std::cout << static_cast<int>(target) << std::endl;                                      // 27 (11011) <- target bits to achieve
@@ -638,7 +658,7 @@ int main()
 ```
 @tab Scoped flag
 ```cpp
-enum class Elements : int { Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
+enum class Elements { Fire = 1<<0, Water = 1<<1, Earth = 1<<2 };
 
 int main()
 {
@@ -666,7 +686,7 @@ bool canWrite = (userPermissions & Write) == Write;
 ```
 @tab Scoped flag
 ```cpp
-enum class Permissions : int { None = 0, Read = 1, Write = 2, Execute = 4, Delete = 8 };
+enum class Permissions { None = 0, Read = 1, Write = 2, Execute = 4, Delete = 8 };
 
 Permissions userPermissions = static_cast<Permissions>(static_cast<int>(Permissions::Read) | static_cast<int>(Permissions::Write));
 
@@ -819,7 +839,7 @@ int main() {
 #include <iostream>
 
 // 1. Define the enum class
-enum class Permissions : int {
+enum class Permissions {
     None = 0,
     Read = 1,
     Write = 2,
