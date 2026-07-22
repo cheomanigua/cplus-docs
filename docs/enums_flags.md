@@ -11,7 +11,7 @@ In C++, an **enumeration** is a user-defined type that defines a set of named co
 [!INFO]
 By convention, enum name should be in singular.
 
-There are to types of enumeration: **Unscoped enumeration** and **Scoped enumeration (Enum Class)**.
+There are two types of enumerations: **Unscoped enumeration** and **Scoped enumeration (Enum Class)**.
 
 The primary difference between unscoped enums (`enum`) and scoped enums (`enum class`) in C++ is how they handle type safety, name collisions, and implicit conversions.
 

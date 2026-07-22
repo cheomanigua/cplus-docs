@@ -56,7 +56,7 @@ By using `const &` in your function signatures, you eliminate the cost of duplic
 
 #### A Complete Implementation
 
-In C++, the behavior you are looking for—specifically sequential memory layout and efficient pass-by-reference—is the default way the language works. You do not need attributes like `[StructLayout]` because C++ guarantees that members defined in a `struct` are laid out in memory in the exact order they are declared.
+In C++, the behavior you are looking for (specifically sequential memory layout and efficient pass-by-reference) is the default way the language works. You do not need attributes like `[StructLayout]` because C++ guarantees that members defined in a `struct` are laid out in memory in the exact order they are declared.
 
 Here is the native C++ implementation of your code:
 
@@ -132,7 +132,7 @@ Does this implementation provide the performance and memory behavior you are aim
 
 ## Memory Layout and Performance
 
-In C++, structs are `LayoutKind::Sequential` by default. This means the compiler lays out the members in memory exactly in the order they are declared. This is highly efficient for CPU cache utilization because data is stored contiguously.
+In C++, structs are C# `LayoutKind::Sequential` equivalent by default. This means the compiler lays out the members in memory exactly in the order they are declared. This is highly efficient for CPU cache utilization because data is stored contiguously.
 
 ### Struct Layout
 
