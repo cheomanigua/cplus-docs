@@ -11,12 +11,42 @@ struct Point {
     int X;
     int Y;
 
-    // Constructor to initialize members
+    // Constructor to initialize members, not really needed in this struct Point
     Point(int x, int y) : X(x), Y(y) {}
 };
 
+// In function
+PositionComp foo {1.0f, 2.0f}; // aggregate initialization, no constructor needed
+PositionComp foo (1.0f, 2.0f); // constructor call
 ```
 
+### Constructor
+
+In the example above, the constructor is not necessary because it is simply assigning values, which is equivalent to aggregate initialization.
+
+Constructors become useful when you need to:
+
+- Validate input.
+- Compute derived values.
+- Initialize const or reference members.
+- Enforce invariants.
+- Hide implementation details.
+
+Example:
+
+```cpp
+struct SensorComp {
+    float Range;
+    float RangeSquared;
+    bool IsEnabled;
+
+    SensorComp(float range, bool isEnabled)
+        : Range(range),
+          RangeSquared(range * range),
+          IsEnabled(isEnabled)
+    {}
+};
+```
 
 ## Struct: Pass-by-Reference
 
@@ -63,53 +93,46 @@ Here is the native C++ implementation of your code:
 ```cpp
 #include <iostream>
 
-namespace SimulationEngine {
+struct PositionComp {
+    float X;
+    float Y;
+};
 
-    struct PositionComp {
-        float X;
-        float Y;
+struct SensorComp {
+    float Range;
+    float RangeSquared;
+    bool IsEnabled;
 
-        PositionComp(float x, float y) : X(x), Y(y) {}
-    };
+    SensorComp(float range, bool isEnabled) 
+        : Range(range), RangeSquared(range * range), IsEnabled(isEnabled) {}
+};
 
-    struct SensorComp {
-        float Range;
-        float RangeSquared;
-        bool IsEnabled;
+class RadarSystem {
+public:
+    // C++ equivalent of 'in': const reference (const &)
+    // Passes by memory address (efficient) and enforces read-only (safety)
+    static bool IsWithinRadarRange(const PositionComp& sourcePos, 
+                                   const PositionComp& targetPos, 
+                                   const SensorComp& radar) 
+    {
+        if (!radar.IsEnabled)
+            return false;
 
-        SensorComp(float range, bool isEnabled) 
-            : Range(range), RangeSquared(range * range), IsEnabled(isEnabled) {}
-    };
+        float deltaX = targetPos.X - sourcePos.X;
+        float deltaY = targetPos.Y - sourcePos.Y;
+        float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
 
-    class RadarSystem {
-    public:
-        // C++ equivalent of 'in': const reference (const &)
-        // Passes by memory address (efficient) and enforces read-only (safety)
-        static bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                                       const PositionComp& targetPos, 
-                                       const SensorComp& radar) 
-        {
-            if (!radar.IsEnabled)
-                return false;
+        std::cout << "Distance: " << distanceSquared 
+                  << ". Radar Range: " << radar.RangeSquared << std::endl;
 
-            float deltaX = targetPos.X - sourcePos.X;
-            float deltaY = targetPos.Y - sourcePos.Y;
-            float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
-
-            std::cout << "Distance: " << distanceSquared 
-                      << ". Radar Range: " << radar.RangeSquared << std::endl;
-
-            return distanceSquared <= radar.RangeSquared;
-        }
-    };
-}
+        return distanceSquared <= radar.RangeSquared;
+    }
+};
 
 int main() {
-    using namespace SimulationEngine;
-
     // Stack allocation (standard behavior for structs in C++)
-    PositionComp ussPasadenaPos(120.15f, 30.85f);
-    PositionComp targetPos(170.14f, 31.15f);
+    PositionComp ussPasadenaPos {120.15f, 30.85f};
+    PositionComp targetPos {170.14f, 31.15f};
     SensorComp passiveRadar(50.0f, true);
 
     bool detected = RadarSystem::IsWithinRadarRange(ussPasadenaPos, targetPos, passiveRadar);
