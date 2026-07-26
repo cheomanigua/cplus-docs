@@ -91,57 +91,54 @@ In C++, the behavior you are looking for (specifically sequential memory layout 
 Here is the native C++ implementation of your code:
 
 ```cpp
+
 #include <iostream>
 
 struct PositionComp {
-    float X;
-    float Y;
+    float X{};
+    float Y{};
 };
 
 struct SensorComp {
-    float Range;
-    float RangeSquared;
-    bool IsEnabled;
+    float RangeSquared{};
+    bool IsEnabled{};
 
-    SensorComp(float range, bool isEnabled) 
-        : Range(range), RangeSquared(range * range), IsEnabled(isEnabled) {}
+    SensorComp(float range, bool isEnabled)
+        : RangeSquared(range * range), IsEnabled(isEnabled) {}
 };
 
-class RadarSystem {
-public:
-    // C++ equivalent of 'in': const reference (const &)
-    // Passes by memory address (efficient) and enforces read-only (safety)
-    static bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                                   const PositionComp& targetPos, 
-                                   const SensorComp& radar) 
-    {
-        if (!radar.IsEnabled)
-            return false;
+// C++ equivalent of 'in': const reference (const &)
+// Passes by memory address (efficient) and enforces read-only (safety)
+bool IsWithinRadarRange(
+        const PositionComp& sourcePos,
+        const PositionComp& targetPos,
+        const SensorComp& radar)
+{
+    if (!radar.IsEnabled)
+        return false;
 
-        float deltaX = targetPos.X - sourcePos.X;
-        float deltaY = targetPos.Y - sourcePos.Y;
-        float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+    float deltaX = targetPos.X - sourcePos.X;
+    float deltaY = targetPos.Y - sourcePos.Y;
+    float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
 
-        std::cout << "Distance: " << distanceSquared 
-                  << ". Radar Range: " << radar.RangeSquared << std::endl;
+    std::cout << "Distance: " << distanceSquared 
+              << ". Radar Range: " << radar.RangeSquared << "\n";
 
-        return distanceSquared <= radar.RangeSquared;
-    }
-};
+    return distanceSquared <= radar.RangeSquared;
+}
 
 int main() {
     // Stack allocation (standard behavior for structs in C++)
-    PositionComp ussPasadenaPos {120.15f, 30.85f};
-    PositionComp targetPos {170.14f, 31.15f};
+    PositionComp ussPasadenaPos {110.15f, 30.85f};
+    PositionComp targetPos {160.14f, 31.15f};
     SensorComp passiveRadar(50.0f, true);
 
-    bool detected = RadarSystem::IsWithinRadarRange(ussPasadenaPos, targetPos, passiveRadar);
+    bool detected = IsWithinRadarRange(ussPasadenaPos, targetPos, passiveRadar);
 
-    std::cout << "Target Detected: " << (detected ? "True" : "False") << std::endl;
+    std::cout << "Target Detected: " << (detected ? "True" : "False") << "\n";
 
     return 0;
 }
-
 ```
 
 ### Key Mapping Notes for Your Transition:

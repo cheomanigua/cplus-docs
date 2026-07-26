@@ -177,21 +177,18 @@ In the example below, <code>sourcePos</code> and <code>targetPos</code> are <cod
 ### Raylib
 
 ```cpp
-class RadarSystem {
-    public:
-    static bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                                   const PositionComp& targetPos, 
-                                   const SensorComp& radar) {
-        if (!radar.isEnabled) return false;
+bool IsWithinRadarRange(const PositionComp& sourcePos, 
+                               const PositionComp& targetPos, 
+                               const SensorComp& radar) {
+    if (!radar.isEnabled) return false;
 
-        // Directly pass the Vector2 member
-        return CheckCollisionPointCircle(
-            targetPos, 
-            sourcePos, 
-            radar.range
-        );
-    }
-};
+    // Directly pass the Vector2 member
+    return CheckCollisionPointCircle(
+        targetPos, 
+        sourcePos, 
+        radar.range
+    );
+}
 ```
 
 [!INFO]
@@ -200,19 +197,16 @@ In the example below, <code>sourcePos</code> and <code>targetPos</code> are <cod
 ### Custom
 
 ```cpp
-class RadarSystem {
-    public:
-    static bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                                   const PositionComp& targetPos, 
-                                   const SensorComp& radar) {
-        if (!radar.isEnabled) return false;
+bool IsWithinRadarRange(const PositionComp& sourcePos, 
+                               const PositionComp& targetPos, 
+                               const SensorComp& radar) {
+    if (!radar.isEnabled) return false;
 
-        float deltaX = targetPos.x - sourcePos.x;
-        float deltaY = targetPos.y - sourcePos.y;
-        float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
-        return distanceSquared <= radar.rangeSquared;
-    }
-};
+    float deltaX = targetPos.x - sourcePos.x;
+    float deltaY = targetPos.y - sourcePos.y;
+    float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
+    return distanceSquared <= radar.rangeSquared;
+}
 ```
 
 # RayMath (Vector2)
