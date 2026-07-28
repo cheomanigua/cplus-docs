@@ -53,7 +53,7 @@ To fully integrate the **Dexterity** attribute, you must modify the following fi
 | **`include/Components/StatsComponent.hpp`** | Add `stats.Dexterity = 0.0f` in the initialization/constructor. |
 | **`include/Core/Contracts/CharacterSheetDto.hpp`** | Add `int Dexterity` member and update the constructor to accept/initialize `Dexterity(dexterity)`. |
 | **`include/Core/Model.hpp`** | Update `EntityStats` struct, `RaceData` struct, `ClassData` struct, and their corresponding `NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE` macros. |
-| **`src/Core/ConsoleGameView.cpp`** | Add `<< std::setw(8) << (int)stats.Dexterity` to the display logic. |
+| **`src/Core/ConsoleGameView.cpp`** | Add `<< std::setw(8) << static_cast<int>(stats.Dexterity)` to the display logic. |
 | **`src/Core/FormulaProcessor.cpp`** | Update `GetStatRef` to handle `"Dexterity"`, `"RaceDex"`, and `"ClassDex"`, and update `Execute` to assign the result to `stats.Dexterity`. |
 | **`src/Main.cpp`** | Update the `statsComp.InitializeStats` call to include the `Dexterity` parameter with initial hardcoded value `1.0f`. |
 
@@ -84,7 +84,7 @@ To fully integrate the **Dexterity** attribute, you must modify the following fi
     * `if (name == "ClassDex") return static_cast<float>(cls.ClassDex);`
     * In the `Execute` method, include: `if (targetName == "Dexterity") stats.Dexterity = currentVal;`.
 * **`Main.cpp`**: Update the initialization call to pass the `Dexterity` value `1.0f` explicitly: `statsComp.InitializeStats(newId, 1.0f, 1.0f, 1.0f, 1.0f, 10.0f, 10.0f);`
-* **`ConsoleGameView.cpp`**: Add the output stream operator for the stat: `<< std::setw(8) << (int)stats.Dexterity`.
+* **`ConsoleGameView.cpp`**: Add the output stream operator for the stat: `<< std::setw(8) << static_cast<int>(stats.Dexterity)`.
 
 ### Summary Table
 
@@ -220,7 +220,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(EntityStats, Health, Mana, Strength, Intellig
 
                       std::cout << std::left << std::setw(5)  << id 
                   // ... existing ...
-                  << std::setw(8)  << (int)stats.Dexterity // Add this line
+                  << std::setw(8)  << static_cast<int>(stats.Dexterity) // Add this line
                   // ... existing ...
 
 ```
