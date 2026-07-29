@@ -369,3 +369,124 @@ In both cases, `DrawTexture()` draws a `Texture2D`. The only difference is where
 
 If you're drawing the same object many times (bullets, particles, tiles, sprites), prefer **DrawTexture**.
 
+* * *
+
+# Libraries
+
+## `raygui.h`
+
+- Location: `https://github.com/raysan5/raygui/blob/master/src/raygui.h`
+- Download command: `wget https://raw.githubusercontent.com/raysan5/raygui/refs/heads/master/src/raygui.h`
+
+`raygui` was designed as an auxiliary module for [raylib](https://github.com/raysan5/raylib) to create simple GUI interfaces using raylib graphic style (simple colors, plain rectangular shapes, wide borders...) but it can be adapted to other engines/frameworks.
+
+`raygui` is intended for **tools development**; it has already been used to develop [multiple published tools](https://raylibtech.itch.io).
+
+## `rcamera.h`
+
+- Location: `https://github.com/raysan5/raylib/blob/master/src/rcamera.h`
+- Download command: `wget https://raw.githubusercontent.com/raysan5/raylib/refs/heads/master/src/rcamera.h`
+
+Basic camera system with support for multiple camera modes. No need to download the file into your project. I added the Location and Download command because there is no documentation other than what appears in the `rcamera.h` source code.
+
+## `reasings.h`
+
+- Location: `https://github.com/raylib-extras/reasings/blob/main/src/reasings.h`
+- Download command: `wget https://raw.githubusercontent.com/raylib-extras/reasings/refs/heads/main/src/reasings.h`
+
+**`reasings.h`** is a single-file header library provided by **raylib** that contains mathematical **easing functions** used for smooth animations and transitions.
+
+The name is a portmanteau of **r**aylib and **easings**. It is a C port of Robert Penner’s famous easing equations, which are widely used in game development and UI design to make movements look natural (e.g., accelerating, decelerating, bouncing, or elastic effects).
+
+### Key Features
+
+* **Value Animation:** Provides standard mathematical curves (Sine, Quad, Cubic, Quart, Quint, Expo, Circ, Back, Elastic, Bounce) with **In**, **Out**, and **InOut** variants.
+* **Header-Only & Standalone:** It can be included easily into projects.
+* **No Dependencies:** Unlike some raylib modules, it is pure math and doesn't strictly depend on the core raylib graphics engine to function.
+
+### How the Function Parameters Work
+
+Every easing function in `reasings.h` takes four standard arguments:
+
+1. **`t` (time):** The current time or frame of the animation (must use the same unit as duration).
+2. **`b` (beginning value):** The starting value of the property you are animating (e.g., a starting X position of `0.0f`).
+3. **`c` (change):** The total change in value needed to reach the destination (i.e., `Target Value - Beginning Value`).
+4. **`d` (duration):** The total time or total number of frames the animation is expected to take.
+
+### Code Example
+
+#### Example 1 - Left to Right
+
+```c
+#include "raylib.h"
+#include "reasings.h" // Include the easings header
+
+int main() {
+    InitWindow(800, 450, "Raylib Easing Example");
+    SetTargetFPS(60);
+
+    int currentTime {};
+    constexpr int duration {120}; // Animation takes 120 frames (2 seconds at 60 FPS)
+
+    constexpr float startPosX {100.0f};
+    constexpr float targetPosX {700.0f};
+    float changeInX {targetPosX - startPosX};
+
+    while (!WindowShouldClose()) {
+        float currentPosX {startPosX};
+
+        // Animate position if the animation hasn't finished
+        if (currentTime <= duration) {
+            // Using EaseSineInOut for a smooth acceleration and deceleration
+            currentPosX = EaseSineInOut((float)currentTime, startPosX, changeInX, (float)duration);
+            currentTime++;
+        }
+
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            // Draw a circle moving smoothly across the screen
+            DrawCircle((int)currentPosX, 225, 30, MAROON);
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
+```
+
+#### Example 2 - Oscillation
+
+```cpp
+#include "raylib.h"
+#include "reasings.h" // Include the easings header
+
+int main() {
+    InitWindow(800, 450, "Raylib Easing Example");
+    SetTargetFPS(60);
+
+    int currentTime {};
+    constexpr int duration {30}; // Animation takes 30 frames (1/2 seconds at 60 FPS)
+
+    constexpr float startPosX {100.0f};
+    constexpr float finalPosX {130.0f};
+
+    while (!WindowShouldClose()) {
+        float currentPosX {startPosX};
+
+        if (currentPosX < finalPosX)
+        {
+            currentPosX = EaseSineIn(currentTime, startPosX, finalPosX - startPosX, duration);
+            currentTime++;
+        }
+
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            // Draw a circle oscillating smoothly in the screen
+            DrawCircle((int)currentPosX, 225, 30, BLUE);
+        EndDrawing();
+    }
+
+    CloseWindow();
+    return 0;
+}
+```
