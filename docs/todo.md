@@ -67,7 +67,7 @@ public class EntityRegistry
 When you use a random ID (like `1005`), your `Rid[] _entityToRid` array has to be at least 1006 elements long, with 1005 of those slots wasted. By using a sequential allocator:
 
 * **Memory Density**: If you have 100 entities, you only need an array of size 100.
-* **Cache Locality**: When you iterate over your entities in a `for` loop (e.g., `for (int i = 0; i < entityCount; i++)`), the CPU hardware prefetcher detects the sequential memory access pattern and loads the next entity data into the cache *before* you even ask for it.
+* **Cache Locality**: When you iterate over your entities in a `for` loop (e.g., `for (int i{}; i < entityCount; ++i)`), the CPU hardware prefetcher detects the sequential memory access pattern and loads the next entity data into the cache *before* you even ask for it.
 
 ### Essential Rules for Sequential IDs
 

@@ -147,7 +147,7 @@ struct ShieldComponent {
 class VisualSyncSystem {
 public:
     void UpdateVisuals(std::span<ShieldComponent> shields, std::span<GodotShieldNode*> viewNodes) {
-        for (size_t i = 0; i < shields.size(); i++) {
+        for (int i{}; i < shields.size(); ++i) {
             // Read by reference, preventing any copy overhead
             const auto& shield = shields[i]; 
             if (shield.IsDirty) {

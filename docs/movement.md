@@ -96,7 +96,7 @@ void MovementSystem::Update(
     int entityCount,
     float deltaTime)
 {
-    for (int i = 0; i < entityCount; i++)
+    for (int i{} ; i < entityCount; ++i)
     {
         if (!activeMask[i]) continue;
         transforms[i].Origin += velocities[i] * speeds[i] * deltaTime;
