@@ -115,6 +115,58 @@ void InputSystem::PollInput(CommandQueue& queue, EntityRegistry& registry, Posit
 
 # Movement
 
+## Cursor keys
+
+```cpp
+#include "raylib.h"
+#include "raymath.h"
+
+struct Circle {
+    Vector2 position{};
+    float radius{};
+};
+
+int main()
+{
+    constexpr int screenWidth { 800 };
+    constexpr int screenHeight { 450 };
+    constexpr float speed { 100.0f };
+
+    InitWindow(screenWidth, screenHeight, "raylib [core] example - input keys");
+    Circle circle { {300.0f, 150.0f}, 20.0f };
+    SetTargetFPS(60);
+
+    while (!WindowShouldClose())
+    {
+        float dt = GetFrameTime();
+
+        Vector2 movement = {
+            static_cast<float>(IsKeyDown(KEY_RIGHT)) - static_cast<float>(IsKeyDown(KEY_LEFT)),
+            static_cast<float>(IsKeyDown(KEY_DOWN))  - static_cast<float>(IsKeyDown(KEY_UP))
+        };
+
+        if (Vector2Length(movement) > 0.0f)
+        {
+            movement = Vector2Normalize(movement);
+        }
+
+        // Move
+        circle.position = Vector2Add(circle.position, Vector2Scale(movement, speed * dt));
+
+        // Draw
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            DrawCircleV(circle.position, circle.radius, BLUE);
+        EndDrawing();
+    }
+
+    CloseWindow();
+
+    return 0;
+}
+```
+
+
 ## Point and click
 
 [!INFO]
@@ -193,20 +245,71 @@ if (isMoving) {
 
 # Collision
 
-## Point in Circle
+Common and simple collisions are:
 
-[!INFO]
-In the examples below, <code>origin.position</code> and <code>target.position</code> are <code>Vector2</code>. The other variable, <code>origin.radius</code> is a <code>float</code>.
+- Point inside Circle
+- Circle vs Circle
+- Rectangle vs Rectangle
+- Circle vs Rectangle
+
+For the next examples we create two structs:
+
+```cpp
+struct Ball {
+    Vector2 position{};
+    float radius{};
+};
+
+struct Box {
+    Vector2 position{};
+    Vector2 size{};
+
+    // Return a Raylib Rectangle type which is great for raylib collision functions
+    Rectangle GetBounds() const
+    {
+        return {
+            position.x,
+            position.y,
+            size.x,
+            size.y
+        };
+    }
+};
+```
+
+Then we instantiate like this:
+
+```cpp
+Ball originBall { {200.0f, 200.0f}, 20.0f };
+Ball targetBall { {300.0f, 300.0f}, 20.0f };
+Box originBox { {200.0f, 200.0f}, {30.0f, 30.0f} };
+Box targetBox { {300.0f, 300.0f}, {30.0f, 30.0f} };
+```
+
+And now we can use different ways to check for collisions in Raylib:
 
 ### Raylib
 
 ```cpp
-bool hasCollided = CheckCollisionPointCircle(origin.position, target.position, origin.radius);
+// Point in Circle
+bool hasCollided = CheckCollisionPointCircle(targetBall.position, originBall.position, originBall.radius);
+
+// Circle to Circle
+bool hasCollided = CheckCollisionCircles(originBall.position, originBall.radius, targetBall.position, targetBall.radius);
+
+// Rect to Rect
+bool hasCollided = CheckCollisionRecs(originBox.GetBounds(), targetBox.GetBounds());
+
+// Circle to Rect
+bool hasCollided = CheckCollisionCircleRec(originBall.position, originBall.radius, targetBox.GetBounds());
 ```
+
 ### Custom
 
+This is a custom Point in Circle algorithm:
+
 ```cpp
-bool IsPointInCircle(Vector2 origin, Vector2 target, float radius) {
+bool IsPointInCircle(Vector2 point, Vector2 center, float radius) {
     float deltaX = origin.x - target.x;
     float deltaY = origin.y - target.y;
     float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
@@ -214,8 +317,9 @@ bool IsPointInCircle(Vector2 origin, Vector2 target, float radius) {
 }
 
 // ...
-bool hasCollided = IsPointInCircle(origin.position, target.position, origin.radius);
+bool hasCollided = IsPointInCircle(targetBall.position, originBall.position, originBall.radius);
 ```
+
 
 # RayMath (Vector2)
 
