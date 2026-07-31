@@ -196,41 +196,25 @@ if (isMoving) {
 ## Point in Circle
 
 [!INFO]
-In the example below, <code>sourcePos</code> and <code>targetPos</code> are <code>Vector2</code>
+In the examples below, <code>origin.position</code> and <code>target.position</code> are <code>Vector2</code>. The other variable, <code>origin.radius</code> is a <code>float</code>.
 
 ### Raylib
 
 ```cpp
-bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                               const PositionComp& targetPos, 
-                               const SensorComp& radar) {
-    if (!radar.isEnabled) return false;
-
-    // Directly pass the Vector2 member
-    return CheckCollisionPointCircle(
-        targetPos, 
-        sourcePos, 
-        radar.range
-    );
-}
+bool hasCollided = CheckCollisionPointCircle(origin.position, target.position, origin.radius);
 ```
-
-[!INFO]
-In the example below, <code>sourcePos</code> and <code>targetPos</code> are <code>Structs</code>
-
 ### Custom
 
 ```cpp
-bool IsWithinRadarRange(const PositionComp& sourcePos, 
-                               const PositionComp& targetPos, 
-                               const SensorComp& radar) {
-    if (!radar.isEnabled) return false;
-
-    float deltaX = targetPos.x - sourcePos.x;
-    float deltaY = targetPos.y - sourcePos.y;
+bool IsPointInCircle(Vector2 origin, Vector2 target, float radius) {
+    float deltaX = origin.x - target.x;
+    float deltaY = origin.y - target.y;
     float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
-    return distanceSquared <= radar.rangeSquared;
+    return distanceSquared <= radius * radius;
 }
+
+// ...
+bool hasCollided = IsPointInCircle(origin.position, target.position, origin.radius);
 ```
 
 # RayMath (Vector2)
@@ -377,6 +361,7 @@ If you're drawing the same object many times (bullets, particles, tiles, sprites
 
 - Location: `https://github.com/raysan5/raygui/blob/master/src/raygui.h`
 - Download command: `wget https://raw.githubusercontent.com/raysan5/raygui/refs/heads/master/src/raygui.h`
+- Download needed: YES
 
 `raygui` was designed as an auxiliary module for [raylib](https://github.com/raysan5/raylib) to create simple GUI interfaces using raylib graphic style (simple colors, plain rectangular shapes, wide borders...) but it can be adapted to other engines/frameworks.
 
@@ -386,6 +371,7 @@ If you're drawing the same object many times (bullets, particles, tiles, sprites
 
 - Location: `https://github.com/raysan5/raylib/blob/master/src/rcamera.h`
 - Download command: `wget https://raw.githubusercontent.com/raysan5/raylib/refs/heads/master/src/rcamera.h`
+- Download needed: NO
 
 Basic camera system with support for multiple camera modes. No need to download the file into your project. I added the Location and Download command because there is no documentation other than what appears in the `rcamera.h` source code.
 
@@ -393,6 +379,7 @@ Basic camera system with support for multiple camera modes. No need to download 
 
 - Location: `https://github.com/raylib-extras/reasings/blob/main/src/reasings.h`
 - Download command: `wget https://raw.githubusercontent.com/raylib-extras/reasings/refs/heads/main/src/reasings.h`
+- Download needed: YES
 
 **`reasings.h`** is a single-file header library provided by **raylib** that contains mathematical **easing functions** used for smooth animations and transitions.
 
@@ -417,7 +404,7 @@ Every easing function in `reasings.h` takes four standard arguments:
 
 #### Example 1 - Left to Right
 
-```c
+```cpp
 #include "raylib.h"
 #include "reasings.h" // Include the easings header
 
@@ -445,7 +432,7 @@ int main() {
         BeginDrawing();
             ClearBackground(RAYWHITE);
             // Draw a circle moving smoothly across the screen
-            DrawCircle((int)currentPosX, 225, 30, MAROON);
+            DrawCircle(static_cast<int>(currentPosX), 225, 30, MAROON);
         EndDrawing();
     }
 
@@ -482,7 +469,7 @@ int main() {
         BeginDrawing();
             ClearBackground(RAYWHITE);
             // Draw a circle oscillating smoothly in the screen
-            DrawCircle((int)currentPosX, 225, 30, BLUE);
+            DrawCircle(static_cast<int>(currentPosX), 225, 30, BLUE);
         EndDrawing();
     }
 
