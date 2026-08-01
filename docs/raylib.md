@@ -309,15 +309,15 @@ Common and simple collisions are:
 - Rectangle vs Rectangle
 - Circle vs Rectangle
 
-For the next examples we create two structs:
+In order to explain them, we need to create the following two structs:
 
 ```cpp
-struct Ball {
+struct Circle {
     Vector2 position{};
     float radius{};
 };
 
-struct Box {
+struct Square {
     Vector2 position{};
     Vector2 size{};
 
@@ -337,10 +337,10 @@ struct Box {
 Then we instantiate like this:
 
 ```cpp
-Ball originBall { {200.0f, 200.0f}, 20.0f };
-Ball targetBall { {300.0f, 300.0f}, 20.0f };
-Box originBox { {200.0f, 200.0f}, {30.0f, 30.0f} };
-Box targetBox { {300.0f, 300.0f}, {30.0f, 30.0f} };
+Circle circle1 { {200.0f, 200.0f}, 20.0f };
+Circle circle2 { {300.0f, 300.0f}, 20.0f };
+Square square1 { {200.0f, 200.0f}, {30.0f, 30.0f} };
+Square square2 { {300.0f, 300.0f}, {30.0f, 30.0f} };
 ```
 
 And now we can use different ways to check for collisions in Raylib:
@@ -349,16 +349,16 @@ And now we can use different ways to check for collisions in Raylib:
 
 ```cpp
 // Point in Circle
-bool hasCollided = CheckCollisionPointCircle(targetBall.position, originBall.position, originBall.radius);
+bool hasCollidedPC = CheckCollisionPointCircle(circle1.position, circle2.position, circle2.radius);
 
 // Circle to Circle
-bool hasCollided = CheckCollisionCircles(originBall.position, originBall.radius, targetBall.position, targetBall.radius);
+bool hasCollidedCC = CheckCollisionCircles(circle1.position, circle1.radius, circle2.position, circle2.radius);
 
 // Rect to Rect
-bool hasCollided = CheckCollisionRecs(originBox.GetBounds(), targetBox.GetBounds());
+bool hasCollidedRR = CheckCollisionRecs(square1.GetBounds(), square2.GetBounds());
 
 // Circle to Rect
-bool hasCollided = CheckCollisionCircleRec(originBall.position, originBall.radius, targetBox.GetBounds());
+bool hasCollidedCR = CheckCollisionCircleRec(circle1.position, circle1.radius, square2.GetBounds());
 ```
 
 ### Custom
@@ -374,7 +374,7 @@ bool IsPointInCircle(Vector2 point, Vector2 center, float radius) {
 }
 
 // ...
-bool hasCollided = IsPointInCircle(targetBall.position, originBall.position, originBall.radius);
+bool hasCollided = IsPointInCircle(circle2.position, circle1.position, circle1.radius);
 ```
 
 ### Full example
@@ -411,10 +411,10 @@ int main()
     constexpr float speed { 100.0f };
 
     InitWindow(screenWidth, screenHeight, "raylib [core] example - input keys");
-    Circle circle1 { {300.0f, 150.0f}, 20.0f };
-    Circle circle2 { {500.0f, 150.0f}, 40.0f };
-    Square square1 { {300.0f, 300.0f}, {30.0f, 30.0f} };
-    Square square2 { {500.0f, 300.0f}, {30.0f, 30.0f} };
+    Circle circle1 { {400.0f, 215.0f}, 20.0f };
+    Circle circle2 { {500.0f, 215.0f}, 40.0f };
+    Square square1 { {250.0f, 200.0f}, {30.0f, 30.0f} };
+    Square square2 { {300.0f, 200.0f}, {30.0f, 30.0f} };
     SetTargetFPS(60);
 
     while (!WindowShouldClose())
@@ -431,6 +431,7 @@ int main()
             movement = Vector2Normalize(movement);
         }
 
+
         // Collision Detection
         bool hasCollidedPC = CheckCollisionPointCircle(circle1.position, circle2.position, circle2.radius);
         bool hasCollidedCC = CheckCollisionCircles(circle1.position, circle1.radius, circle2.position, circle2.radius);
@@ -439,6 +440,7 @@ int main()
 
         // Movement
         circle1.position = Vector2Add(circle1.position, Vector2Scale(movement, speed * dt));
+        square1.position = Vector2Add(square1.position, Vector2Scale(movement, speed * dt));
 
 
         // Draw
@@ -452,7 +454,7 @@ int main()
             DrawRectangleRec(square1.GetBounds(), BLUE);
             DrawRectangleRec(square2.GetBounds(), RED);
 
-            DrawText("move the ball with arrow keys", 10, 10, 20, DARKGRAY);
+            DrawText("move the blue ball and blue square with arrow keys", 10, 10, 20, DARKGRAY);
             DrawText(TextFormat("PointInCircle: %s", hasCollidedPC ? "YES" : "NO"), 10, 30, 20, hasCollidedPC ? RED : DARKGRAY);
             DrawText(TextFormat("CirclevsCircle: %s", hasCollidedCC ? "YES" : "NO"), 10, 50, 20, hasCollidedCC ? RED : DARKGRAY);
             DrawText(TextFormat("RectvsRect: %s", hasCollidedRR ? "YES" : "NO"), 10, 70, 20, hasCollidedRR ? RED : DARKGRAY);
@@ -468,51 +470,6 @@ int main()
 ```
 
 
-# RayMath (Vector2)
-
-Ref: [raymath cheatsheet](https://www.raylib.com/cheatsheet/raymath_cheatsheet.html)
-
-### 1. Vector Arithmetic (The Basics)
-
-* `Vector2Zero` / `Vector2One`: Used to initialize variables to "nothing" or "a standard unit of measurement".
-* `Vector2Add` / `Vector2Subtract`: These are the bread and butter of movement. Adding a velocity vector to a position vector moves an object. Subtracting one position from another gives you the direction vector between them.
-* `Vector2AddValue` / `Vector2SubtractValue`: Used to change a single property of a vector (like just the X or Y component) without affecting the other.
-* `Vector2Scale` / `Vector2Multiply` / `Vector2Divide`: Used to change the magnitude (length) of a vector. For example, scaling a direction vector by a "speed" value makes an object move faster.
-* `Vector2Negate` / `Vector2Invert`: Used to flip a vector. Negating a velocity vector makes an object move in the exact opposite direction.
-
-
-
-### 2. Magnitude and Distance
-
-* `Vector2Length` / `Vector2LengthSqr`: Tells you how "long" a vector is (the speed or the distance). The "Sqr" version is a performance shortcut used when you don't need the exact length, just a comparison.
-* `Vector2Distance` / `Vector2DistanceSqr`: Measures the physical gap between two objects in the game world. Useful for checking if an enemy is close enough to attack.
-
-
-
-### 3. Direction and Alignment
-
-* `Vector2Normalize`: Converts any vector into a "unit vector" (length of 1). This is vital when you want to keep the direction but ignore the current speed.
-* `Vector2DotProduct`: Used to check the alignment between two vectors. It tells you if objects are facing each other, moving away from each other, or are perpendicular.
-* `Vector2CrossProduct`: In 2D, this determines the "side" (left or right) one vector is on relative to another.
-* `Vector2Angle` / `Vector2LineAngle`: Used to calculate the actual degree or radian rotation between two vectors or lines.
-
-
-
-### 4. Geometry and Manipulation
-
-* `Vector2Rotate`: Changes the direction a vector is pointing by a specific amount of rotation.
-* `Vector2Reflect` / `Vector2Refract`: Used for physics and optics. Reflection is how a ball bounces off a wall; refraction simulates light or projectiles passing through different mediums.
-* `Vector2Lerp`: Smoothly transitions between two points. Used for "tweening" animations or camera systems that need to follow a player without feeling robotic.
-* `Vector2MoveTowards`: A "set it and forget it" function that moves a point toward a target without overshooting it.
-
-
-
-### 5. Utilities
-
-* `Vector2Min` / `Vector2Max`: Returns the smallest or largest components from two vectors; used to find the boundaries of a shape.
-* `Vector2Clamp` / `Vector2ClampValue`: Forces a vector or its length to stay within specific minimum and maximum limits. Great for capping an object's maximum speed.
-* `Vector2Equals`: Checks if two vectors are effectively the same point, accounting for potential floating-point math errors.
-* `Vector2Transform`: Used to apply complex geometric changes (like rotation, scaling, or shearing) to a position using a Matrix.
 
 * * *
 
@@ -607,6 +564,52 @@ If you're drawing the same object many times (bullets, particles, tiles, sprites
 * * *
 
 # Libraries
+
+## `raymath.h`
+
+Ref: [raymath cheatsheet](https://www.raylib.com/cheatsheet/raymath_cheatsheet.html)
+
+### 1. Vector Arithmetic (The Basics)
+
+* `Vector2Zero` / `Vector2One`: Used to initialize variables to "nothing" or "a standard unit of measurement".
+* `Vector2Add` / `Vector2Subtract`: These are the bread and butter of movement. Adding a velocity vector to a position vector moves an object. Subtracting one position from another gives you the direction vector between them.
+* `Vector2AddValue` / `Vector2SubtractValue`: Used to change a single property of a vector (like just the X or Y component) without affecting the other.
+* `Vector2Scale` / `Vector2Multiply` / `Vector2Divide`: Used to change the magnitude (length) of a vector. For example, scaling a direction vector by a "speed" value makes an object move faster.
+* `Vector2Negate` / `Vector2Invert`: Used to flip a vector. Negating a velocity vector makes an object move in the exact opposite direction.
+
+
+
+### 2. Magnitude and Distance
+
+* `Vector2Length` / `Vector2LengthSqr`: Tells you how "long" a vector is (the speed or the distance). The "Sqr" version is a performance shortcut used when you don't need the exact length, just a comparison.
+* `Vector2Distance` / `Vector2DistanceSqr`: Measures the physical gap between two objects in the game world. Useful for checking if an enemy is close enough to attack.
+
+
+
+### 3. Direction and Alignment
+
+* `Vector2Normalize`: Converts any vector into a "unit vector" (length of 1). This is vital when you want to keep the direction but ignore the current speed.
+* `Vector2DotProduct`: Used to check the alignment between two vectors. It tells you if objects are facing each other, moving away from each other, or are perpendicular.
+* `Vector2CrossProduct`: In 2D, this determines the "side" (left or right) one vector is on relative to another.
+* `Vector2Angle` / `Vector2LineAngle`: Used to calculate the actual degree or radian rotation between two vectors or lines.
+
+
+
+### 4. Geometry and Manipulation
+
+* `Vector2Rotate`: Changes the direction a vector is pointing by a specific amount of rotation.
+* `Vector2Reflect` / `Vector2Refract`: Used for physics and optics. Reflection is how a ball bounces off a wall; refraction simulates light or projectiles passing through different mediums.
+* `Vector2Lerp`: Smoothly transitions between two points. Used for "tweening" animations or camera systems that need to follow a player without feeling robotic.
+* `Vector2MoveTowards`: A "set it and forget it" function that moves a point toward a target without overshooting it.
+
+
+
+### 5. Utilities
+
+* `Vector2Min` / `Vector2Max`: Returns the smallest or largest components from two vectors; used to find the boundaries of a shape.
+* `Vector2Clamp` / `Vector2ClampValue`: Forces a vector or its length to stay within specific minimum and maximum limits. Great for capping an object's maximum speed.
+* `Vector2Equals`: Checks if two vectors are effectively the same point, accounting for potential floating-point math errors.
+* `Vector2Transform`: Used to apply complex geometric changes (like rotation, scaling, or shearing) to a position using a Matrix.
 
 ## `raygui.h`
 
