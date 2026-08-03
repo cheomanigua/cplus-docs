@@ -227,6 +227,34 @@ The index ties together multiple arrays.
 | Raw pointers or flat arrays                | Index-based `for`                 |
 | Partial or stepped iteration               | Index-based `for`                 |
 
+
+## Increment operator
+
+### Pre-increment operator
+
+`++foo` increments the object and returns a reference to the incremented object. It is preferred in almost all situations.
+
+### Post-increment operator
+
+`foo++` must conceptually create the old value, increment the object, and return the old value.
+
+### Pre vs Pro
+
+* Use **`++foo`** unless you specifically need the previous value.
+* Use **`foo++`** only when the old value is semantically required.
+
+For example:
+
+```cpp
+++counter;           // preferred
+++it;                // preferred
+
+int old = counter++; // need the old value
+```
+
+[!TIP]
+Use <strong>Pre-increment operators</strong> also outside loops.
+
 # `int` vs `std::size_t`
 
 There are two types of indices in index-based `for` loops: `std::size_t` and `int`.
