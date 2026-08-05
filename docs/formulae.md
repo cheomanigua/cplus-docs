@@ -27,7 +27,7 @@ The primary goal here is **Extreme Modularity**.
 | --- | --- | --- | --- |
 | **Activation** | `Trigger` | `OnEquip`, `OnUse`, `OnHit`, `Passive` | Determines *when* the engine executes the logic. |
 | **Timing** | `Execution` | `Inmediate`, `Delayed`, `Triggered` | Determines how execution is scheduled after activation. |
-| **Scope** | `Target` | `Self`, `Melee`, `Ranged` | Defines how recipients are selected. |
+| **Scope** | `Targeting` | `Self`, `Melee`, `Ranged` | Defines how recipients are selected. |
 | **Scope** | `AoE` | `True`, `False` | Determines whether the effect applies to a single target or multiple targets within an area. |
 | **Duration** | `Persistence` | `Instant`, `Temporary`, `Permanent` | Defines lifespan of the action. |
 | **Evaluation** | `Operation` | `Add`, `Move`, `Apply` | Determines which operation the formula processor performs. |
@@ -111,7 +111,7 @@ Weapons are defined as entities holding multiple components, separating physical
     "Categories": { "Type": "Weapon", "Execution": "Immediate" },
     "GrantedComponents": [
       { "Tag": "WeaponComponent", "Properties": { "Damage": "10.0", "DamageType": "Physical", "Targeting": "Melee" } },
-      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnHit", "Targeting": "Melee", "Persistence": "Instant", "Effect": "Add", "Stat": "Health", "Value": "-15.0", "DamageType": "Fire" } }
+      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnHit", "Targeting": "Melee", "Persistence": "Instant", "Operation": "Add", "Stat": "Health", "Value": "-15.0", "DamageType": "Fire" } }
     ]
   }
 }
@@ -153,7 +153,7 @@ Rings and Scrolls function identically to weapons via `MagicComponent` packets. 
   "50": {
     "Name": "Ring of Mending",
     "GrantedComponents": [
-      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnEquip", "Effect": "Add", "Stat": "Health", "Value": "5.0", "Persistence": "Permanent", "Targeting": "Self" } }
+      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnEquip", "Operation": "Add", "Stat": "Health", "Value": "5.0", "Persistence": "Permanent", "Targeting": "Self" } }
     ]
   }
 }
@@ -163,7 +163,7 @@ Rings and Scrolls function identically to weapons via `MagicComponent` packets. 
   "61": {
     "Name": "Scroll of Poison Cloud",
     "GrantedComponents": [
-      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnUse", "Effect": "Apply", "Status": "Poisoned", "Persistence": "Temporal", "Targeting": "AOE", "Duration": "10.0" } }
+      { "Tag": "MagicComponent", "Properties": { "Trigger": "OnUse", "Operation": "Apply", "Status": "Poisoned", "Persistence": "Temporal", "Targeting": "Ranged", "AoE": "True", "Duration": "10.0" } }
     ]
   }
 }
@@ -174,7 +174,7 @@ Rings and Scrolls function identically to weapons via `MagicComponent` packets. 
 
 ```cpp
 void EffectSystem::Resolve(int targetId, const PropertyMap& props) {
-    std::string effect = props.at("Effect");
+    std::string effect = props.at("Operation");
     
     if (effect == "Add") {
         StatSystem::Apply(targetId, props.at("Stat"), std::stof(props.at("Value")));
