@@ -25,10 +25,12 @@ The primary goal here is **Extreme Modularity**.
 
 | Classification | Property | Value(s) | Description |
 | --- | --- | --- | --- |
-| **Timing** | `Trigger` | `OnEquip`, `OnUse`, `OnHit`, `Passive` | Determines *when* the engine executes the logic. |
-| **Scope** | `Targeting` | `Self`, `Melee`, `Ranged`, `AOE`,  | Filters recipients before execution. |
-| **Action** | `Effect` | `Add`, `Move`, `Apply` | Routes the math to the correct system. |
-| **Duration** | `Persistence` | `Instant`, `Temporal`, `Permanent`, `Delayed` | Defines lifespan and lifecycle requirements. |
+| **Activation** | `Trigger` | `OnEquip`, `OnUse`, `OnHit`, `Passive` | Determines *when* the engine executes the logic. |
+| **Timing** | `Execution` | `Inmediate`, `Delayed`, `Triggered` | Determines how execution is scheduled after activation. |
+| **Scope** | `Target` | `Self`, `Melee`, `Ranged` | Defines how recipients are selected. |
+| **Scope** | `AoE` | `True`, `False` | Determines whether the effect applies to a single target or multiple targets within an area. |
+| **Duration** | `Persistence` | `Instant`, `Temporary`, `Permanent` | Defines lifespan of the action. |
+| **Evaluation** | `Operation` | `Add`, `Move`, `Apply` | Determines which operation the formula processor performs. |
 
 ---
 
