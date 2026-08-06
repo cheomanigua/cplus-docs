@@ -4,157 +4,49 @@
 
 ## Mouse selection
 
-1. **`include/Systems/SpatialSystem.hpp`**
-* **Defines the Data Structure:** This is where the `_grid` (the 2D container storing entity references) is declared.
-* **Defines the Interface:** This declares the methods required to manipulate the grid.
-
-```cpp
-#pragma once
-#include <vector>
-#include "Engine/EntityRegistry.hpp"
-#include "Components/PositionComponent.hpp"
-#include "Core/Constants.hpp"
-
-class SpatialSystem {
-public:
-    void Clear();
-    void Update(EntityRegistry& registry, const PositionComponent& posComp);
-    const std::vector<int32_t>& GetEntitiesInCell(int x, int y) const;
-
-private:
-    std::vector<int32_t> _grid[EngineConfig::GridWidth][EngineConfig::GridHeight];
-};
-```
-
-2. **`src/Systems/SpatialSystem.cpp`**
-* **Implements the Logic:** This contains the actual code for `UpdateEntityCell` (which calculates which grid cell an entity belongs to based on `EngineConfig::CellSize`) and `GetEntitiesInCell` (which provides the lookup for the `InputSystem`).
-* **Clearing the Grid:** This contains the `ClearGrid()` method, which iterates through the entire 2D grid structure to reset the entity lists for every frame.
-
-```cpp
-#include "Systems/SpatialSystem.hpp"
-#include <iostream>
-
-// Clears the grid at the start of every frame
-void SpatialSystem::Clear() {
-    for (int x = 0; x < EngineConfig::GridWidth; ++x) {
-        for (int y = 0; y < EngineConfig::GridHeight; ++y) {
-            _grid[x][y].clear();
-        }
-    }
-}
-
-// Maps entity to cell
-void SpatialSystem::Update(EntityRegistry& registry, const PositionComponent& posComp) {
-    Clear();
-    
-    // Iterate only over active entities
-    const auto& activeEntities = registry.GetActiveEntities();
-    
-    for (int32_t id : activeEntities) {
-        Vector2 pos = posComp.Positions[id];
-        
-        int x = static_cast<int>(pos.x / EngineConfig::CellSize);
-        int y = static_cast<int>(pos.y / EngineConfig::CellSize);
-        
-        if (x >= 0 && x < EngineConfig::GridWidth && y >= 0 && y < EngineConfig::GridHeight) {
-            _grid[x][y].push_back(id);
-        }
-    }
-}
-
-const std::vector<int32_t>& SpatialSystem::GetEntitiesInCell(int x, int y) const {
-    static const std::vector<int32_t> empty;
-    if (x >= 0 && x < EngineConfig::GridWidth && y >= 0 && y < EngineConfig::GridHeight) {
-        return _grid[x][y];
-    }
-    return empty;
-}
-```
-
-3. **`src/Systems/InputSystem.cpp`**
-* **Consumes the Grid:** This is where the spatial grid is actively queried. Instead of iterating over every single entity in the game, it calculates the `cellX` and `cellY` of the mouse position and calls `registry.GetEntitiesInCell(cellX, cellY)` to only perform collision checks on entities located in that specific area.
-
-```cpp
-void InputSystem::PollInput(CommandQueue& queue, EntityRegistry& registry, PositionComponent& posComp, const SpatialSystem& spatialSystem) {
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        Vector2 mousePos = GetMousePosition();
-        int32_t clickedId = -1;
-
-        // Grid query logic
-        int cellX = static_cast<int>(mousePos.x) / EngineConfig::CellSize;
-        int cellY = static_cast<int>(mousePos.y) / EngineConfig::CellSize;
-
-        const auto& entitiesInCell = spatialSystem.GetEntitiesInCell(cellX, cellY);
-        
-        for (int32_t id : entitiesInCell) {
-            Vector2& pos = posComp.Positions[id];
-            // Only perform collision checks on entities in the specific cell
-            if (CheckCollisionPointCircle(mousePos, pos, 20.0f)) {
-                clickedId = id;
-                break;
-            }
-        }
-    // ...
-```
-
-4. **`src/Main.cpp`**
-* **Orchestrates Grid Maintenance:** This is where the grid lifecycle is managed. Before input is processed or entities are drawn, it calls `sharedRegistry.ClearGrid()` and iterates through all active entities to call `UpdateEntityCell()`. This ensures the grid is always up-to-date with the current positions of entities in the game world.
-
-```cpp
-    // Grid lifecycle management inside the Main Loop
-    while (!WindowShouldClose()) {
-        // Maintain Spatial State via the System (Clear and Repopulate)
-        spatialSystem.Update(sharedRegistry, posComp);
-    
-        // ...
-
-        for (int32_t id : sharedRegistry.GetActiveEntities()) {
-            raylibView.DrawMesh(id, posComp.Positions[id], moveComp);
-        // ...
-```
-
 # Movement
+
+In order to calculate smooth, frame-rate independent movement, game development relies on five core variables: `position`, `direction`, `speed`, `deltaTime`, and `velocity`. Below is a summary of each one:
 
 ### Position
 
-In computer science, **Position** is a 2D vector containing `X` and `Y` coordinates.
+In computer science, **Position** is a 2D vector containing `X` and `Y` coordinates that tell you where an entity is located in the game world.
 
 In Raylib, **Position** can be represented by a `Vector2` of float values:
 
-`Vector2 position { 10.0f, 15.0f }`
+`Vector2 position { 10.0f, 15.0f };`
 
-### Velocity
+### Direction
 
-In computer science, **Velocity** is a vector that represents **direction** and **magnitude**.
+**Direction** is a unit vector that represents *where* an entity wants to go, without defining how fast it gets there. Before it is used for movement, it is usually normalized so its magnitude becomes `1.0f` (or `0.0f` when there is no input). This ensures diagonal movement is not faster than horizontal or vertical movement.
 
-In Raylib, **Velocity** can be represented by a `Vector2`:
+Using Raylib input handling functions, we translate WASD or cursor key presses directly into a **Direction** vector:
 
-- `Vector2{0.0f, 1.0f}`: Direction: down. Magnitude: 1.0f
-- `Vector2{0.0f, -1.0f}`: Direction: up. Magnitude: 1.0f
-- `Vector2{1.0f, 0.0f}`: Direction: right. Magnitude: 1.0f
-- `Vector2{-1.0f, 0.0f}`: Direction: left. Magnitude: 1.0f
+* `KEY_DOWN` is equal to `Vector2{0.0f, 1.0f}`
+* `KEY_UP` is equal to `Vector2{0.0f, -1.0f}`
+* `KEY_RIGHT` is equal to `Vector2{1.0f, 0.0f}`
+* `KEY_LEFT` is equal to `Vector2{-1.0f, 0.0f}`
 
-Using Raylib Input Handling Functions keys we translate the WASD/cursor key presses into **Velocity** vector values. Example:
-
-- `KEY_DOWN` is equal to `Vector2{0.0f, 1.0f}`
-- `KEY_UP` is equal to `Vector2{0.0f, -1.0f}`
-- `KEY_RIGHT` is equal to `Vector2{1.0f, 0.0f}`
-- `KEY_LEFT` is equal to `Vector2{-1.0f, 0.0f}`
+*(Note: For NPCs or AI, you can generate this direction randomly or programmatically instead of using key presses!)*
 
 [!WARNING]
 <strong>IMPORTANT</strong>
-This is very convenient for key bindings, but all base <strong>Velocity</strong> values are limited to <code>0.0f</code>, <code>1.0f</code> and <code>-1.0f</code>. To scale this up to a custom <strong>Velocity</strong> of <code>Vector2{0.0f, 50.f}</code>, we multiply the vector by <code>50.f</code> using another variable: <code>speed</code>.
+While capturing key presses this way is convenient, after normalization it results in a vector components of <code>0.0f</code>, <code>1.0f</code>, and <code>-1.0f</code>. In order to scale this value up to a proper movement speed (like a magnitude of <code>50.0f</code>), we multiply the vector by our <code>speed</code> variable.
+
+The above values are normalized. In Raylib, you can normalize the values like this: `direction = Vector2Normalize(direction);`
 
 ### Speed
 
-Without **Speed**, **Velocity** will be limited to values `0.0f`, `1.0f` and `-1.0f` when using Raylib Input Handling Functions keys to set their values.
+**Speed** is a scalar value (a single float) that determines how fast the entity moves.
 
-**Speed** is used to change the magnitute of **Velocity**, in this case by multiplying **Velocity** by **Speed**.
+Because raw key presses only yield a tiny magnitude of `1.0f` (meaning 1 pixel per second—far too slow for a game), we use **Speed** to scale our movement up to a practical value (e.g., `50.0f` pixels per second).
 
-In Raylib, you achieve that by using the `Vector2Scale` function:
+In order to scale up our movement, we multiply **Direction** by **Speed**.
 
-- Raylib: `velocity = Vector2Scale(velocity, speed)`
-- Normal: `velocity = velocity * speed)`
+In Raylib, we achieve that by using the `Vector2Scale` function:
+
+- Raylib: `velocity = Vector2Scale(direction, speed)`
+- Pseudo: `velocity = direction * speed`
 
 ### DeltaTime
 
@@ -164,24 +56,76 @@ Without delta time, your game's movement speed would be tied directly to the fra
 
 Multiplying your movement by `deltaTime` scales the motion to real-world time. If a frame takes longer to render, `deltaTime` becomes larger, moving the object further in that single frame to compensate. This ensures movement speed remains **smooth and consistent**, regardless of how fast or slow the computer's framerate is.
 
-- Raylib: `velocity = Vector2Scale(velocity, speed * deltaTime)`
-- Normal: `velocity = velocity * (speed * deltaTime)`
+### Velocity
+
+**Velocity** is the final movement vector that combines **Direction**, **Speed**, and **DeltaTime**. It represents the exact amount of change that will be applied to the position in the current frame.
+
+In Raylib, calculating velocity looks like this:
+
+* `Vector2 velocity = Vector2Scale(direction, speed * deltaTime);`
+
+In pseudocode:
+
+* `velocity = direction * (speed * deltaTime)`
 
 ### Calculating Position
 
-Position is calculated everyframe by adding a **Position** vector to a **Velocity** vector:
+Position is updated every frame by adding the **Velocity** vector to the **Position** vector:
 
-- Normal: `position = position + velocity`
-- Raylib: `position = Vector2Add(position, velocity)`
+* Pseudo: `position = position + velocity;`
+* Raylib: `position = Vector2Add(position, velocity);`
 
-Now, the full formula taking into account **Speed** and **DeltaTime** will be:
+Putting it all together into a single line of code:
 
-- Normal: `position = (position + (velocity * (speed * deltaTime)))`
-- Raylib: `position = Vector2Add(position, Vector2Scale(velocity, speed * deltaTime))`
+* Pseudo: `position = position + (direction * speed * deltaTime);`
+* Raylib: `position = Vector2Add(position, Vector2Scale(direction, speed * deltaTime));`
 
-Raylib increment version:
 
-`position += Vector2Add(position, Vector2Scale(velocity, speed * deltaTime)`
+## Direction vs Velocity
+
+- **Direction** is a unit vector (with a magnitude of **1**) that specifies the heading or orientation in which something is pointing or moving, completely independent of its **speed**.
+- **Velocity** is a vector that represents **direction** and **magnitude**. 
+
+Example:
+
+```
+Vector2 direction {0.0f, 1.0f};
+float speed {30.0f};
+Vector2 velocity = Vector2Scale(direction, speed); // velocity = direction * speed
+```
+
+You can also hard code velocity values, but is much less flexible:
+
+```
+Vector2 velocity { 0.0f, 30.f };
+```
+
+### Direction
+
+Remember that we explained in **Step 9** what **Direction** is. In computer science, Direction is a **normalized** vector that represents the movement direction:
+
+- `Vector2{0.0f, 1.0f}`: Direction: down.
+- `Vector2{0.0f, -1.0f}`: Direction: up.
+- `Vector2{1.0f, 0.0f}`: Direction: right.
+- `Vector2{-1.0f, 0.0f}`: Direction: left.
+
+Using the **Input Component** we translate the WASD/cursor key presses into **Direction** vector values. Example:
+
+- `KEY_DOWN` is equal to `Vector2{0.0f, 1.0f}`
+- `KEY_UP` is equal to `Vector2{0.0f, -1.0f}`
+- `KEY_RIGHT` is equal to `Vector2{1.0f, 0.0f}`
+- `KEY_LEFT` is equal to `Vector2{-1.0f, 0.0f}`
+
+[!INFO]
+<strong>What is Normalization?</strong>
+When you press two keys at once (such as <code>KEY_RIGHT</code> and <code>KEY_DOWN</code>), your raw input vector becomes <code>Vector2{1.0f, 1.0f}</code>. If you calculate the length of that diagonal vector using Pythagorean theorem, it equals roughly <code>1.414</code> instead of <code>1.0f</code>. This means an entity moving diagonally would move <strong>41% faster</strong> than someone moving in a straight line.
+<strong>Normalization</strong> is the mathematical process of shrinking that diagonal vector back down so its overall length (magnitude) is exactly <code>1.0f</code>, keeping movement speeds uniform in all directions.
+However, because normalization forces every active direction vector to have a magnitude of <code>1.0f</code>, your entity would crawl at just 1 pixel per second. To fix this and achieve a proper movement speed (like a magnitude of <code>50.0f</code>), we multiply the normalized direction vector by a <code>speed</code> variable.
+
+### Velocity
+
+Velocity is a vector that represents **direction** and **magnitude**. It is the final movement vector that combines **Direction**, **Speed**, and **DeltaTime**. It represents the exact amount of change that will be applied to the position in the current frame.
+
 
 ## Cursor keys
 
@@ -208,18 +152,18 @@ int main()
     {
         float deltaTime = GetFrameTime();
 
-        Vector2 velocity = {
+        Vector2 direction = {
             static_cast<float>(IsKeyDown(KEY_RIGHT)) - static_cast<float>(IsKeyDown(KEY_LEFT)),
             static_cast<float>(IsKeyDown(KEY_DOWN))  - static_cast<float>(IsKeyDown(KEY_UP))
         };
 
-        if (Vector2Length(velocity) > 0.0f)
+        if (Vector2Length(direction) > 0.0f)
         {
-            velocity = Vector2Normalize(velocity);
+            direction = Vector2Normalize(direction);
         }
 
         // Move
-        circle.position = Vector2Add(circle.position, Vector2Scale(velocity, speed * deltaTime));
+        circle.position = Vector2Add(circle.position, Vector2Scale(direction, speed * deltaTime));
 
         // Draw
         BeginDrawing();
@@ -489,14 +433,14 @@ int main()
     {
         float deltaTime = GetFrameTime();
 
-        Vector2 velocity = {
+        Vector2 direction = {
             static_cast<float>(IsKeyDown(KEY_RIGHT)) - static_cast<float>(IsKeyDown(KEY_LEFT)),
             static_cast<float>(IsKeyDown(KEY_DOWN))  - static_cast<float>(IsKeyDown(KEY_UP))
         };
 
-        if (Vector2Length(velocity) > 0.0f)
+        if (Vector2Length(direction) > 0.0f)
         {
-            velocity = Vector2Normalize(velocity);
+            direction = Vector2Normalize(direction);
         }
 
 
@@ -507,8 +451,8 @@ int main()
         bool hasCollidedCR = CheckCollisionCircleRec(circle1.position, circle1.radius, square2.GetBounds());
 
         // Movement
-        circle1.position = Vector2Add(circle1.position, Vector2Scale(velocity, speed * deltaTime));
-        square1.position = Vector2Add(square1.position, Vector2Scale(velocity, speed * deltaTime));
+        circle1.position = Vector2Add(circle1.position, Vector2Scale(direction, speed * deltaTime));
+        square1.position = Vector2Add(square1.position, Vector2Scale(direction, speed * deltaTime));
 
 
         // Draw
@@ -647,9 +591,9 @@ Ref: [raymath cheatsheet](https://www.raylib.com/cheatsheet/raymath_cheatsheet.h
 
 [!INFO]
 <strong>Example</strong>
-Raylib:   <code>position = Vector2Add(position, Vector2Scale(velocity, speed * deltaTime))</code>
-Equivalent: <code>position = (position + (velocity * (speed * deltaTime)))</code>
-Standard: <code>position += velocity * speed * deltaTime</code>
+Raylib:   <code>position = Vector2Add(position, Vector2Scale(direction, speed * deltaTime))</code>
+Equivalent: <code>position = (position + (direction * (speed * deltaTime)))</code>
+Standard: <code>position += direction * speed * deltaTime</code>
 
 ### 2. Magnitude and Distance
 
