@@ -115,6 +115,74 @@ void InputSystem::PollInput(CommandQueue& queue, EntityRegistry& registry, Posit
 
 # Movement
 
+### Position
+
+In computer science, **Position** is a 2D vector containing `X` and `Y` coordinates.
+
+In Raylib, **Position** can be represented by a `Vector2` of float values:
+
+`Vector2 position { 10.0f, 15.0f }`
+
+### Velocity
+
+In computer science, **Velocity** is a vector that represents **direction** and **magnitude**.
+
+In Raylib, **Velocity** can be represented by a `Vector2`:
+
+- `Vector2{0.0f, 1.0f}`: Direction: down. Magnitude: 1.0f
+- `Vector2{0.0f, -1.0f}`: Direction: up. Magnitude: 1.0f
+- `Vector2{1.0f, 0.0f}`: Direction: right. Magnitude: 1.0f
+- `Vector2{-1.0f, 0.0f}`: Direction: left. Magnitude: 1.0f
+
+Using Raylib Input Handling Functions keys we translate the WASD/cursor key presses into **Velocity** vector values. Example:
+
+- `KEY_DOWN` is equal to `Vector2{0.0f, 1.0f}`
+- `KEY_UP` is equal to `Vector2{0.0f, -1.0f}`
+- `KEY_RIGHT` is equal to `Vector2{1.0f, 0.0f}`
+- `KEY_LEFT` is equal to `Vector2{-1.0f, 0.0f}`
+
+[!WARNING]
+<strong>IMPORTANT</strong>
+This is very convenient for key bindings, but all base <strong>Velocity</strong> values are limited to <code>0.0f</code>, <code>1.0f</code> and <code>-1.0f</code>. To scale this up to a custom <strong>Velocity</strong> of <code>Vector2{0.0f, 50.f}</code>, we multiply the vector by <code>50.f</code> using another variable: <code>speed</code>.
+
+### Speed
+
+Without **Speed**, **Velocity** will be limited to values `0.0f`, `1.0f` and `-1.0f` when using Raylib Input Handling Functions keys to set their values.
+
+**Speed** is used to change the magnitute of **Velocity**, in this case by multiplying **Velocity** by **Speed**.
+
+In Raylib, you achieve that by using the `Vector2Scale` function:
+
+- Raylib: `velocity = Vector2Scale(velocity, speed)`
+- Normal: `velocity = velocity * speed)`
+
+### DeltaTime
+
+Delta Time is the time elapsed, measured in seconds, between the current frame and the previous frame.
+
+Without delta time, your game's movement speed would be tied directly to the framerate. If a player is running at 60 frames per second, the object updates 60 times a second and moves fast. If the framerate drops to 30 frames per second, the object updates half as often and moves sluggishly.
+
+Multiplying your movement by `deltaTime` scales the motion to real-world time. If a frame takes longer to render, `deltaTime` becomes larger, moving the object further in that single frame to compensate. This ensures movement speed remains **smooth and consistent**, regardless of how fast or slow the computer's framerate is.
+
+- Raylib: `velocity = Vector2Scale(velocity, speed * deltaTime)`
+- Normal: `velocity = velocity * (speed * deltaTime)`
+
+### Calculating Position
+
+Position is calculated everyframe by adding a **Position** vector to a **Velocity** vector:
+
+- Normal: `position = position + velocity`
+- Raylib: `position = Vector2Add(position, velocity)`
+
+Now, the full formula taking into account **Speed** and **DeltaTime** will be:
+
+- Normal: `position = (position + (velocity * (speed * deltaTime)))`
+- Raylib: `position = Vector2Add(position, Vector2Scale(velocity, speed * deltaTime))`
+
+Raylib increment version:
+
+`position += Vector2Add(position, Vector2Scale(velocity, speed * deltaTime)`
+
 ## Cursor keys
 
 ```cpp
@@ -138,20 +206,20 @@ int main()
 
     while (!WindowShouldClose())
     {
-        float dt = GetFrameTime();
+        float deltaTime = GetFrameTime();
 
-        Vector2 movement = {
+        Vector2 velocity = {
             static_cast<float>(IsKeyDown(KEY_RIGHT)) - static_cast<float>(IsKeyDown(KEY_LEFT)),
             static_cast<float>(IsKeyDown(KEY_DOWN))  - static_cast<float>(IsKeyDown(KEY_UP))
         };
 
-        if (Vector2Length(movement) > 0.0f)
+        if (Vector2Length(velocity) > 0.0f)
         {
-            movement = Vector2Normalize(movement);
+            velocity = Vector2Normalize(velocity);
         }
 
         // Move
-        circle.position = Vector2Add(circle.position, Vector2Scale(movement, speed * dt));
+        circle.position = Vector2Add(circle.position, Vector2Scale(velocity, speed * deltaTime));
 
         // Draw
         BeginDrawing();
@@ -177,7 +245,7 @@ In the examples below, <code>ussPasadena</code> and <code>destination</code> are
 ```cpp
 // Movement Logic (Moving toward destination)
 if (isMoving) {
-    ussPasadena = Vector2MoveTowards(ussPasadena, destination, speed * dt);
+    ussPasadena = Vector2MoveTowards(ussPasadena, destination, speed * deltaTime);
     if (Vector2Distance(ussPasadena, destination) < 0.1f) {
         ussPasadena = destination;
         isMoving = false;
@@ -210,7 +278,7 @@ int main()
 
     while (!WindowShouldClose())
     {
-        float dt = GetFrameTime();
+        float deltaTime = GetFrameTime();
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             destination = GetMousePosition();
@@ -219,7 +287,7 @@ int main()
 
         // Move
         if (isMoving) {
-            circle.position = (Vector2MoveTowards(circle.position, destination, speed * dt));
+            circle.position = (Vector2MoveTowards(circle.position, destination, speed * deltaTime));
             if (Vector2Distance(circle.position, destination) < 0.1f) {
                 circle.position = destination;
                 isMoving = false;
@@ -248,11 +316,11 @@ if (isMoving) {
     float dist = Vector2Length(dir);
     
     if (dist > 2.0f) {
-        Vector2 movement = Vector2Scale(Vector2Normalize(dir), movementSpeed * deltaTime);
-        ussPasadena = Vector2Add(ussPasadena, movement);
+        Vector2 positionDelta = Vector2Scale(Vector2Normalize(dir), speed * deltaTime);
+        ussPasadena = Vector2Add(ussPasadena, positionDelta);
     } else {
         isMoving = false;
-        ussPasadena = destination; // Snap to final position[cite: 1]
+        ussPasadena = destination; // Snap to final position
     }
 }
 ```
@@ -264,7 +332,7 @@ if (isMoving) {
 if (isMoving) {
     // 0.1f is the interpolation factor (tweak this for speed)
     // A value of 0.1f means "move 10% of the remaining distance per frame"
-    float t = 0.1f - exp(-movementSpeed * deltaTime);
+    float t = 0.1f - exp(-speed * deltaTime);
     
     ussPasadena = Vector2Lerp(ussPasadena, destination, t);
 
@@ -289,8 +357,8 @@ if (isMoving) {
 
     if (distance > 2.0f) { // Stop if close enough
         // Normalize and move
-        ussPasadena.x += (dx / distance) * movementSpeed * deltaTime;
-        ussPasadena.y += (dy / distance) * movementSpeed * deltaTime;
+        ussPasadena.x += (dx / distance) * speed * deltaTime;
+        ussPasadena.y += (dy / distance) * speed * deltaTime;
 
     } else {
         isMoving = false;
@@ -419,16 +487,16 @@ int main()
 
     while (!WindowShouldClose())
     {
-        float dt = GetFrameTime();
+        float deltaTime = GetFrameTime();
 
-        Vector2 movement = {
+        Vector2 velocity = {
             static_cast<float>(IsKeyDown(KEY_RIGHT)) - static_cast<float>(IsKeyDown(KEY_LEFT)),
             static_cast<float>(IsKeyDown(KEY_DOWN))  - static_cast<float>(IsKeyDown(KEY_UP))
         };
 
-        if (Vector2Length(movement) > 0.0f)
+        if (Vector2Length(velocity) > 0.0f)
         {
-            movement = Vector2Normalize(movement);
+            velocity = Vector2Normalize(velocity);
         }
 
 
@@ -439,8 +507,8 @@ int main()
         bool hasCollidedCR = CheckCollisionCircleRec(circle1.position, circle1.radius, square2.GetBounds());
 
         // Movement
-        circle1.position = Vector2Add(circle1.position, Vector2Scale(movement, speed * dt));
-        square1.position = Vector2Add(square1.position, Vector2Scale(movement, speed * dt));
+        circle1.position = Vector2Add(circle1.position, Vector2Scale(velocity, speed * deltaTime));
+        square1.position = Vector2Add(square1.position, Vector2Scale(velocity, speed * deltaTime));
 
 
         // Draw
@@ -572,12 +640,16 @@ Ref: [raymath cheatsheet](https://www.raylib.com/cheatsheet/raymath_cheatsheet.h
 ### 1. Vector Arithmetic (The Basics)
 
 * `Vector2Zero` / `Vector2One`: Used to initialize variables to "nothing" or "a standard unit of measurement".
-* `Vector2Add` / `Vector2Subtract`: These are the bread and butter of movement. Adding a velocity vector to a position vector moves an object. Subtracting one position from another gives you the direction vector between them.
+* `Vector2Add` / `Vector2Subtract`: These are the bread and butter of movement. Adding a position vector to a velocity vector moves an object. Subtracting one position from another gives you the direction vector between them.
 * `Vector2AddValue` / `Vector2SubtractValue`: Used to change a single property of a vector (like just the X or Y component) without affecting the other.
 * `Vector2Scale` / `Vector2Multiply` / `Vector2Divide`: Used to change the magnitude (length) of a vector. For example, scaling a direction vector by a "speed" value makes an object move faster.
 * `Vector2Negate` / `Vector2Invert`: Used to flip a vector. Negating a velocity vector makes an object move in the exact opposite direction.
 
-
+[!INFO]
+<strong>Example</strong>
+Raylib:   <code>position = Vector2Add(position, Vector2Scale(velocity, speed * deltaTime))</code>
+Equivalent: <code>position = (position + (velocity * (speed * deltaTime)))</code>
+Standard: <code>position += velocity * speed * deltaTime</code>
 
 ### 2. Magnitude and Distance
 
