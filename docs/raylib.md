@@ -1,8 +1,5 @@
 # Raylib Integration
 
-# Selection
-
-## Mouse selection
 
 # Movement
 
@@ -481,7 +478,11 @@ int main()
 }
 ```
 
+* * *
 
+# Selection
+
+## Mouse selection
 
 * * *
 
