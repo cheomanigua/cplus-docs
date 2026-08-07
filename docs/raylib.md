@@ -457,11 +457,11 @@ int main()
 
             ClearBackground(RAYWHITE);
 
-            DrawCircleV(circle1.position, circle1.radius, BLUE);
-            DrawCircleV(circle1.position, circle1.radius / 10.0f, GREEN);
-            DrawCircleV(circle2.position, circle2.radius, RED);
-            DrawRectangleRec(square1.GetBounds(), BLUE);
-            DrawRectangleRec(square2.GetBounds(), RED);
+            DrawCircleLinesV(circle1.position, circle1.radius, BLUE);
+            DrawCircleLinesV(circle2.position, circle2.radius / 30.0f, BLUE);
+            DrawCircleLinesV(circle2.position, circle2.radius, RED);
+            DrawRectangleLinesEx(square1.GetBounds(), 1.0f, BLUE);
+            DrawRectangleLinesEx(square2.GetBounds(), 1.0f,  RED);
 
             DrawText("move the blue ball and blue square with arrow keys", 10, 10, 20, DARKGRAY);
             DrawText(TextFormat("PointInCircle: %s", hasCollidedPC ? "YES" : "NO"), 10, 30, 20, hasCollidedPC ? RED : DARKGRAY);
