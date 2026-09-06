@@ -64,7 +64,7 @@ modernNumbers.at(0) = 10; // .at() provides bounds checking
 ```cpp
 #include <iostream>
 #include <vector>
-#include <algorithm> // Required for std::sort
+#include <algorithm> // Required for std::ranges:::sort
 
 int main() {
     std::vector<int> numbers = {10, 20, 30};
@@ -79,23 +79,22 @@ int main() {
     numbers.pop_back();
 
     // Remove the value 20
-    numbers.erase(std::remove(numbers.begin(), numbers.end(), 20), numbers.end());
+    std::erase(numbers, 20);
 
     // Iterate
     for (int num : numbers) {
         std::cout << num << " ";
     }
 
-    // Sort
-    std::sort(numbers.begin(), numbers.end());
-
+    // Sort the vector
+    std::ranges::sort(numbers);
 
     // Strings
     // Declare and initialize the vector
     std::vector<std::string> sumer = {"Ur", "Uruk", "Adab", "Kish", "Lagash", "Larsa", "Umma"};
 
-    // Sort the vector using the begin and end iterators
-    std::sort(sumer.begin(), sumer.end());
+    // Sort the vector
+    std::ranges::sort(sumer);
 
     // Iterate and print
     for (const std::string& city : sumer) {
