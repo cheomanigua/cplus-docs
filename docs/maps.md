@@ -242,7 +242,7 @@ if (it != inventory.end())
 | Feature | `std::unordered_map<std::string, int>` | Strongly Typed Struct | Winner |
 | --- | --- | --- | --- |
 | **Data Memory** | Spread across a node-based tree. | Compact, contiguous block of memory. | **Struct** |
-| **Access Speed** | $O(\log n)$ (Tree traversal). | $O(1)$ (Direct memory offset). | **Struct** |
+| **Access Speed** | O(log n) (Tree traversal). | O(1) (Direct memory offset). | **Struct** |
 | **Typo Protection** | None. `attributes["strenth"]` causes runtime logical errors. | Total. `attributes.Strenth` results in compile error. | **Struct** |
 | **Autocomplete** | No. | Yes. | **Struct** |
 
@@ -299,13 +299,13 @@ if (orc.DynamicTraits.count("IsEnraged")) {
 
 ## Map vs Unordered Map
 
-In almost every scenario involving gameplay data—such as NPC attributes, inventory systems, or quest logs—you should prefer `std::unordered_map` over `std::map`.
+In almost every scenario involving gameplay data (such as NPC attributes, inventory systems, or quest logs) you should prefer `std::unordered_map` over `std::map`.
 
 Because game development relies on fast, repetitive access, the architectural differences between these two are significant:
 
 ### Why `std::unordered_map` Wins for Games
 
-* **Access Speed**: `std::unordered_map` provides average $O(1)$ time complexity for lookups, whereas `std::map` provides $O(\log n)$. As your collection of items or stats grows, the performance difference becomes more pronounced.
+* **Access Speed**: `std::unordered_map` provides average O(1) time complexity for lookups, whereas `std::map` provides O(log n). As your collection of items or stats grows, the performance difference becomes more pronounced.
 * **Hash Table Efficiency**: `std::unordered_map` uses a hash table, which is the direct C++ equivalent to the C# `Dictionary` mentioned in the original documentation.
 * **Lack of Overhead**: Unless you specifically require the keys to be stored in a sorted order (e.g., displaying a scoreboard or a sorted list of names), the overhead of maintaining the binary search tree structure in `std::map` is wasted CPU time.
 
@@ -341,8 +341,8 @@ Here is what you should specifically keep in mind when using `std::map` (and its
 
 In C#, `Dictionary` is implemented as a hash table. In C++, the default `std::map` is implemented as a **Balanced Binary Search Tree** (usually a Red-Black Tree).
 
-* **`std::map`**: Keeps elements sorted by key. Lookups are $O(\log n)$. This is useful if you need to iterate through your map in alphabetical or numerical order.
-* **`std::unordered_map`**: This is the C++ equivalent of a C# `Dictionary` (hash table). Lookups are $O(1)$ on average. **Always prefer `unordered_map**` for game systems like inventories or status effects unless you specifically need the keys to be sorted.
+* **`std::map`**: Keeps elements sorted by key. Lookups are O(log n). This is useful if you need to iterate through your map in alphabetical or numerical order.
+* **`std::unordered_map`**: This is the C++ equivalent of a C# `Dictionary` (hash table). Lookups are O(1) on average. **Always prefer `unordered_map**` for game systems like inventories or status effects unless you specifically need the keys to be sorted.
 
 ### 2. Memory Ownership and `std::shared_ptr`
 

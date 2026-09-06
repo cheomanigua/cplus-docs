@@ -64,7 +64,6 @@ modernNumbers.at(0) = 10; // .at() provides bounds checking
 ```cpp
 #include <iostream>
 #include <vector>
-#include <algorithm>
 #include <algorithm> // Required for std::sort
 
 int main() {

@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-The engine utilizes a Data-Driven Initialization pipeline to assemble entity stats at runtime. This architecture decouples character definitions (JSON) from combat logic (C#), allowing for rapid balancing without requiring code recompilation.
+The engine utilizes a Data-Driven Initialization pipeline to assemble entity stats at runtime. This architecture decouples character definitions (JSON) from combat logic (C++), allowing for rapid balancing without requiring code recompilation.
 
 ## 2. The Initialization Lifecycle
 
@@ -71,7 +71,7 @@ The system maps high-level blueprints to concrete stats through relational looku
 | Feature | Technical Benefit |
 | --- | --- |
 | **Decoupling** | The `Controller` manages data flow, while the `FormulaProcessor` encapsulates mathematical logic, allowing either to change independently. |
-| **Data-Driven Flexibility** | Balancing changes (e.g., modifying Orc strength or Wizard mana) are made strictly in JSON, requiring zero C# modifications. |
+| **Data-Driven Flexibility** | Balancing changes (e.g., modifying Orc strength or Wizard mana) are made strictly in JSON, requiring zero C++ modifications. |
 | **Optimized Performance** | Assembly occurs only during instantiation. The resulting `CharacterStats` struct uses direct memory offsets, ensuring the combat loop remains cache-efficient. |
 
 
@@ -80,10 +80,10 @@ The system maps high-level blueprints to concrete stats through relational looku
 ### Why this is robust:
 
 * **Decoupling**: The `Controller` knows *which* data to load, but it doesn't need to know the math behind it. The `FormulaProcessor` knows *how* to do the math, but it doesn't know where the data came from.
-* **No Hard-Coding**: Because you are using `InitStats` in your JSON, you can change the racial bonus for an Orc or the base strength of a Warrior without touching your C# code at all.
+* **No Hard-Coding**: Because you are using `InitStats` in your JSON, you can change the racial bonus for an Orc or the base strength of a Warrior without touching your C++ code at all.
 * **Speed**: Since this "Assembly" only happens when an NPC is instantiated (and the math is executed via your cached/pre-compiled logic), your game remains extremely performant during actual combat.
 
-You have successfully built a system where the "Source of Truth" is entirely contained in your JSON files, and your C# code simply acts as the engine to process that data.
+You have successfully built a system where the "Source of Truth" is entirely contained in your JSON files, and your C++ code simply acts as the engine to process that data.
 
 * * *
 

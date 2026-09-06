@@ -4,7 +4,7 @@
 
 A `struct` in C++ is a user-defined type used to group related data members into a single unit, providing a highly efficient memory layout. Unlike classes, where members are private by default, members of a `struct` are public by default.
 
-By default, a `struct` instance is allocated directly on the CPU stack or inline within its containing type, ensuring that its memory footprint is contiguous and its lifetime is strictly deterministic. This direct allocation eliminates pointer indirection and maximizes CPU cache efficiency by keeping data tightly packed. As a result, `structs` are the ideal choice for defining lightweight, performant data types—such as vectors, coordinates, or mathematical matrices—that are frequently created and destroyed within performance-critical execution loops.
+By default, a `struct` instance is allocated directly on the CPU stack or inline within its containing type, ensuring that its memory footprint is contiguous and its lifetime is strictly deterministic. This direct allocation eliminates pointer indirection and maximizes CPU cache efficiency by keeping data tightly packed. As a result, `structs` are the ideal choice for defining lightweight, performant data types (such as vectors, coordinates, or mathematical matrices) that are frequently created and destroyed within performance-critical execution loops.
 
 ```cpp
 struct Point {

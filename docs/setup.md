@@ -2,12 +2,38 @@
 
 # Project structure
 
+### Option 1
+
 ```
 root/
 ├── build/
 │   └── Makefile
 ├── include/
+│   ├── components/
+│   ├── core/
+│   └── systems/
 ├── src/
+│   ├── core/
+│   └── systems/
+└── CMakeList.txt
+```
+
+### Option 2
+
+```
+root
+├── app/
+│   └── src/
+│       └── index.html
+├── build/
+│   └── Makefile
+├── components/
+│   └── include/
+├── core/
+│   └── include/
+├── systems/
+│   ├── include/
+│   └── src/
 └── CMakeList.txt
 ```
 
