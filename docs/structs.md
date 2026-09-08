@@ -8,16 +8,18 @@ By default, a `struct` instance is allocated directly on the CPU stack or inline
 
 ```cpp
 struct Point {
-    int X;
-    int Y;
-
-    // Constructor to initialize members, not really needed in this struct Point
-    Point(int x, int y) : X(x), Y(y) {}
+    float x;
+    float y;
 };
 
-// In function
-PositionComp foo {1.0f, 2.0f}; // aggregate initialization, no constructor needed
-PositionComp foo (1.0f, 2.0f); // constructor call
+int main () {
+	Point foo {1.0f, 2.0f}; // OK. Aggregate initialization, no constructor needed
+	Point foo (1.0f, 2.0f); // ERROR. Constructor call, no constructor present in struct Point
+
+	// C++20 and later
+	Point foo (1.0f, 2.0f); // OK. Aggregate initialization, no constructor needed
+	Point foo {1.0f, 2.0f}; // OK. Aggregate initialization, no constructor needed. Preferred.
+}
 ```
 
 ### Constructor
@@ -35,16 +37,26 @@ Constructors become useful when you need to:
 Example:
 
 ```cpp
-struct SensorComp {
-    float Range;
-    float RangeSquared;
-    bool IsEnabled;
+struct Point {
+    int x, y;
 
-    SensorComp(float range, bool isEnabled)
-        : Range(range),
-          RangeSquared(range * range),
-          IsEnabled(isEnabled)
-    {}
+	// Constructor. In this case limits x to not be bigger than 5
+    Point(int x, int y) : x(x > 5 ? 5 : x), y(y) {}
+};
+
+int main () {
+	Point foo {8, 2}; // actual values of foo: 5, 2
+}
+```
+
+### Value initialization
+
+It is always preferred to value initializate the struct members:
+
+```cpp
+struct Point {
+    float x{};
+    float y{};
 };
 ```
 
@@ -57,8 +69,8 @@ In C++, you use **references** (`&`) or **pointers** (`*`) to pass the memory ad
 
 // Calculates the Euclidean distance between two points.
 float CalculateDistance(const Point& a, const Point& b) {
-    int dx = a.X - b.X;
-    int dy = a.Y - b.Y;
+    int dx = a.x - b.x;
+    int dy = a.y - b.y;
     
     // Highly efficient math directly on the memory, zero data copying.
     // std::sqrt and std::pow are efficient for standard distance calculation
@@ -95,16 +107,16 @@ Here is the native C++ implementation of your code:
 #include <iostream>
 
 struct PositionComp {
-    float X{};
-    float Y{};
+    float x{};
+    float y{};
 };
 
 struct SensorComp {
-    float RangeSquared{};
-    bool IsEnabled{};
+    float rangeSquared{};
+    bool enabled{};
 
-    SensorComp(float range, bool isEnabled)
-        : RangeSquared(range * range), IsEnabled(isEnabled) {}
+    SensorComp(float range, bool enabled)
+        : rangeSquared(range * range), enabled(enabled) {}
 };
 
 // C++ equivalent of 'in': const reference (const &)
@@ -114,17 +126,17 @@ bool IsWithinRadarRange(
         const PositionComp& targetPos,
         const SensorComp& radar)
 {
-    if (!radar.IsEnabled)
+    if (!radar.enabled)
         return false;
 
-    float deltaX = targetPos.X - sourcePos.X;
-    float deltaY = targetPos.Y - sourcePos.Y;
+    float deltaX = targetPos.x - sourcePos.x;
+    float deltaY = targetPos.y - sourcePos.y;
     float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
 
     std::cout << "Distance: " << distanceSquared 
-              << ". Radar Range: " << radar.RangeSquared << "\n";
+              << ". Radar Range: " << radar.rangeSquared << "\n";
 
-    return distanceSquared <= radar.RangeSquared;
+    return distanceSquared <= radar.rangeSquared;
 }
 
 int main() {
@@ -143,7 +155,7 @@ int main() {
 
 ### Key Mapping Notes for Your Transition:
 
-* **Sequential Layout:** C++ `structs` are always sequential. The memory will always be `[X][Y]` in that order. This makes them perfectly cache-friendly for arrays and CPU access.
+* **Sequential Layout:** C++ `structs` are always sequential. The memory will always be `[x][y]` in that order. This makes them perfectly cache-friendly for arrays and CPU access.
 * **The `in` Keyword:** In C#, `in` was created to provide "read-only pointer" semantics for value types. In C++, `const Type&` is the exact tool used for this. It is the idiomatic way to pass data without copying, while guaranteeing the function cannot mutate the original data.
 * **Instantiation:** Notice in `main()`, I didn't use `new`. In C++, `PositionComp ussPasadenaPos(...)` creates the object directly on the stack. There is no constructor overhead, no garbage collection, and it is automatically cleaned up when `main()` returns.
 
