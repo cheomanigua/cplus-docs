@@ -49,6 +49,20 @@ int main () {
 }
 ```
 
+The constructor parameter list does not need to match the function members. This is perfectly valid:
+
+```cpp
+struct Point {
+    int x, y;
+    Point(int x, int y, int z) : x(x > 5 ? 5 : x), y(y * z) {}
+};
+
+int main () {
+	Point foo {8, 2, 5}; // actual values of foo: 5, 10
+}
+```
+
+
 ### Value initialization
 
 It is always preferred to value initializate the struct members:
@@ -103,7 +117,6 @@ In C++, the behavior you are looking for (specifically sequential memory layout 
 Here is the native C++ implementation of your code:
 
 ```cpp
-
 #include <iostream>
 
 struct PositionComp {
@@ -112,11 +125,8 @@ struct PositionComp {
 };
 
 struct SensorComp {
-    float rangeSquared{};
+    float range{};
     bool enabled{};
-
-    SensorComp(float range, bool enabled)
-        : rangeSquared(range * range), enabled(enabled) {}
 };
 
 // C++ equivalent of 'in': const reference (const &)
@@ -126,26 +136,28 @@ bool IsWithinRadarRange(
         const PositionComp& targetPos,
         const SensorComp& radar)
 {
+    float deltaX {targetPos.x - sourcePos.x};
+    float deltaY {targetPos.y - sourcePos.y};
+    float distanceSquared {(deltaX * deltaX) + (deltaY * deltaY)};
+	float rangeSquared {radar.range * radar.range};
+
     if (!radar.enabled)
         return false;
 
-    float deltaX = targetPos.x - sourcePos.x;
-    float deltaY = targetPos.y - sourcePos.y;
-    float distanceSquared = (deltaX * deltaX) + (deltaY * deltaY);
 
-    std::cout << "Distance: " << distanceSquared 
-              << ". Radar Range: " << radar.rangeSquared << "\n";
+    std::cout << "Distance: " << distanceSquared
+              << ". Radar Range: " << rangeSquared << "\n";
 
-    return distanceSquared <= radar.rangeSquared;
+    return distanceSquared <= rangeSquared;
 }
 
 int main() {
     // Stack allocation (standard behavior for structs in C++)
-    PositionComp ussPasadenaPos {110.15f, 30.85f};
-    PositionComp targetPos {160.14f, 31.15f};
-    SensorComp passiveRadar(50.0f, true);
+    PositionComp bluePos {110.00f, 30.00f};
+    PositionComp redPos {110.00f, 80.01f};
+    SensorComp radar {50.0f, true};
 
-    bool detected = IsWithinRadarRange(ussPasadenaPos, targetPos, passiveRadar);
+    bool detected = IsWithinRadarRange(bluePos, redPos, radar);
 
     std::cout << "Target Detected: " << (detected ? "True" : "False") << "\n";
 
