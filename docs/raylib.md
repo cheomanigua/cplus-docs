@@ -608,7 +608,7 @@ DrawTexture renders an existing texture.
 The texture can come from:
 
 * An image (`LoadTexture`)
-* A `RenderTexture`
+* Raylib shapes (`LoadRenderTexture`)
 
 
 ### `LoadTexture`
@@ -618,9 +618,9 @@ Texture2D player = LoadTexture("player.png");
 DrawTexture(player, x, y, WHITE);
 ```
 
-### `RenderTexture`
+### `LoadRenderTexture`
 
-A `RenderTexture` is a texture created entirely in memory.
+A `LoadRenderTexture` is a texture created entirely in memory.
 
 ```cpp
 RenderTexture bulletTexture = LoadRenderTexture(24, 24);
