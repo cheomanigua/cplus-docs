@@ -84,7 +84,7 @@ int main() {
     // Remove all values 20
     std::erase(numbers, 20);
 
-    // Remove the index 1
+    // Remove the element in index 1
     numbers.erase(numbers.begin() + 1);
 
     // Access elements
