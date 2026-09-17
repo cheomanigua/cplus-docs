@@ -69,17 +69,26 @@ modernNumbers.at(0) = 10; // .at() provides bounds checking
 int main() {
     std::vector<int> numbers = {10, 20, 30};
 
-    // Add elements
+    // Add element at the end O(1)
     numbers.push_back(40);
+
+    // Remove element from the end O(1)
+    numbers.pop_back();
+
+    // Add element at the beginnig O(n)
+    numbers.insert(numbers.begin(), 40);
+
+    // Remove element from the beginning O(n)
+    numbers.erase(numbers.begin());
+
+    // Remove all values 20
+    std::erase(numbers, 20);
+
+    // Remove the index 1
+    numbers.erase(numbers.begin() + 1);
 
     // Access elements
     std::cout << "First: " << numbers[0] << std::endl;
-
-    // Remove last element
-    numbers.pop_back();
-
-    // Remove the value 20
-    std::erase(numbers, 20);
 
     // Iterate
     for (int num : numbers) {

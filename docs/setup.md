@@ -24,7 +24,7 @@ root/
 root
 ├── app/
 │   └── src/
-│       └── index.html
+│       └── main.cpp
 ├── build/
 │   └── Makefile
 ├── components/
