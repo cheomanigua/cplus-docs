@@ -278,3 +278,71 @@ Your custom project isn't just using these keywords superficially—they form th
 | **`&` (Ref)** | Systems & Component Lookups (`Systems.cpp`) | Eliminates Struct Copying Overhead |
 | **`std::span`** | Main Simulation Frame Loop View Render (`main.cpp`) | Eliminates Safe Array Access without Performance Loss |
 | **`union`** | *Ready for your high-density NPC/Simulation logic* | Eliminates RAM bloat via physical data overlapping |
+
+
+# Monastery Murder
+
+Here is the consolidated feature set for your procedurally generated, objective simulation-based crime investigation RPG, organized by architectural layer and core mechanics.
+
+---
+
+### 1. Core Architecture & Tech Stack
+
+* **Raylib C++ Engine**: Clean separation of rendering, game loop, and input handling using Raylib.
+* **Data-Driven Design & ECS (EnTT / Flecs)**: Pure data structs (`Position`, `Traits`, `PsychologicalState`, `PhysicalTraceComponent`) decoupled from processing systems (`MovementTraceSystem`, `InterrogationSystem`).
+* **Fixed-Width Cross-Platform Determinism**: Using `std::uint32_t` for random seeds (`Seed #84920`) to guarantee cross-platform simulation replication across Windows, Mac, and Linux.
+* **Dual-Layer Memory Pipeline**:
+* **Static JSON Templates**: Read-only asset templates (`monks.json`, `abbey_rooms.json`, `daily_routines.json`, `dialogue_topics.json`, `scenario_seed.json`) loaded into RAM during the initial startup/loading screen.
+* **Dynamic Runtime State**: Cloning static templates into active in-memory C++ instances for live simulation and interrogation tracking.
+
+
+
+---
+
+### 2. World & Spatial Grid
+
+* **Benedictine Quadrangle Monastery Layout**: Node-based abbey layout featuring functional rooms (Infirmary, Scriptorium, Library, Dormitory, Cellar).
+* **Double Resolution Spatial Grid**: $120 \times 80$ spatial grid (or doubled tile resolution) to enable precise 1-tile step movements, eliminate teleportation, and support corridor physics.
+* **Lighting & Room Metadata**: Rooms track dynamic properties like night-time light levels (`light_level_night`), lock states, and interactive spots.
+
+---
+
+### 3. The Objective 24-Hour Pre-Simulation
+
+* **Exact Spatial Time Scale**: 1 tick = 1 second. 86,400 ticks represent the complete 24-hour pre-simulation loop.
+* **Snapshot Zero (`t = 0`)**: Seeded "initial photograph" capturing the exact starting coordinates and initial states of all monks, furniture, keys, vials, and props before simulation execution.
+* **In-Memory Temporal Log (`TemporalDatabase`)**: A 345 MB contiguous 86,400-tick $O(1)$ memory buffer storing the objective state ($x, y$, room, carrying item, action) of all entities for every second of the day.
+* **Utility AI Movement & Daily Routines**: Monks follow canonical monastic schedules (`daily_routines.json`) using A* pathfinding and Utility AI.
+* **Physical Trace Generation**: Automatic spawning of ground truth evidence (e.g., muddy footprints, dropped keys, unlocked doors) logged to the objective world state.
+
+---
+
+### 4. Subjective Perception & Memory Engine
+
+* **Line-of-Sight & Distance Filtering**: Perception checks calculated dynamically based on spatial distance, light level, line-of-sight, and monk attributes (`observant`).
+* **Stochastic Cognitive Modifiers**: Gaussian/normal distribution random noise applied to emotions, anxiety spikes, and environmental fog.
+* **Confirmation Bias & Misidentification**: Poor lighting or low eyesight leads monks to misidentify figures as rivals or suspects based on grudges (`opinion: -80`) or paranoia (`anxious`).
+* **Dynamic Subjective Memories**: Stored per-monk memory logs recording timestamp, perceived identity, confidence rating, and subjective misinterpretations.
+
+---
+
+### 5. D&D-Style Tactical Interrogation Loop
+
+* **The "Detective Triangle" Core**: Comparing Objective Physical Traces vs. Subjective Monk Memories vs. Subjective Monk Dialogue.
+* **Dialogue as Turn-Based RPG Combat**:
+* **Composure (HP)**: Mental stamina; reaching 0 triggers a complete story collapse/confession.
+* **Mental Armor Class (AC)**: Derived from traits like `Dogmatic`, `Secretive`, or `Social Stature`.
+* **Inquiry Types (Damage Types)**: Logic, Physical Evidence (Bludgeoning/Bypasses AC), Emotional Pressure (Forces Willpower Saves), Moral Appeal.
+* **Status Conditions**: `Shaken` (-2 AC), `Flustered` (prone to slip-ups), `Cornered` (high volatility/breakdown risk).
+
+
+* **Gradual Multi-Turn Resolve Breakdown**: Chipping away at Composure shifts monk responses naturally through thresholds (100–75%: Stony Silence $\rightarrow$ 74–50%: Deflection $\rightarrow$ 49–25%: Shaken Contradictions $\rightarrow$ 24–0%: Breakdown/Disclosure) rather than sudden instant surrender.
+
+---
+
+### 6. Intent/Query Resolution Engine (DSQL)
+
+* **Domain-Specific Query Language (DSQL)**: Interrogations translate player inquiries into structured data queries against the 86,400-tick temporal database (e.g., `SELECT location FROM $subject WHERE time == 13:00`).
+* **Subjective Filter Pipeline**: Query results pull objective truth from the 86,400-tick log, run through monk personality traits/emotional filters, and dynamically generate output statements or lies.
+* **Mad-Libs / Question Builder UI**: Interface allowing players to assemble dynamic questions via UI components that compile into underlying DSQL ASTs.
+* **Evidence "Attack Rolls"**: Presenting physical traces or temporal log contradictions directly triggers critical hit calculations against a monk's mental defense.

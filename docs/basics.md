@@ -335,3 +335,69 @@ the result is often what people expect.
 | Values that may be negative   | `int`                             |
 | Reverse loops                 | `int`                             |
 | Performance considerations    | Either (no meaningful difference) |
+
+
+# `unsigned int` vs `std::uint32_t`
+
+When you need an **unsigned integer that is exactly 32 bits**, prefer `std::uint32_t` over `unsigned int`.
+
+## `std::uint32_t`
+
+`std::uint32_t` is guaranteed to be exactly 32 bits, if the implementation provides it:
+
+```cpp
+#include <cstdint>
+
+std::uint32_t value = 42;
+```
+
+Its range is:
+
+```text
+0 .. 4,294,967,295
+```
+
+This makes it appropriate when the integer size matters, for example:
+
+* Binary file formats
+* Network protocols
+* Serialization
+* Hardware/data formats
+* Random seeds
+
+## `unsigned int`
+
+`unsigned int` is an unsigned integer, but **its size is implementation-defined**.
+
+It is commonly 32 bits:
+
+```cpp
+unsigned int value = 42;
+```
+
+but C++ does not guarantee that it is exactly 32 bits on every system.
+
+## List of fixed-width integers
+
+- `std::int8_t`     1 byte signed	-128 to 127
+- `std::uint8_t`	1 byte unsigned	0 to 255
+- `std::int16_t`	2 byte signed	-32,768 to 32,767
+- `std::uint16_t`	2 byte unsigned	0 to 65,535
+- `std::int32_t`	4 byte signed	-2,147,483,648 to 2,147,483,647
+- `std::uint32_t`	4 byte unsigned	0 to 4,294,967,295
+- `std::int64_t`	8 byte signed	-9,223,372,036,854,775,808 to 9,223,372,036,854,775,807
+- `std::uint64_t`	8 byte unsigned	0 to 18,446,744,073,709,551,615
+
+[!WARNING]
+<strong>WARNING</strong>
+The 8-bit fixed-width integer types are often treated like chars instead of integer values (and this may vary per system). The 16-bit and wider integral types are not subject to this issue.
+
+## Rule of Thumb
+
+| Situation                         | Preferred Type  |
+| --------------------------------- | --------------- |
+| Exactly 32-bit unsigned integer   | `std::uint32_t` |
+| Size-independent unsigned integer | `unsigned int`  |
+
+**Recommendation:** If your code assumes the value is 32 bits, use `std::uint32_t`. It makes the requirement explicit and guarantees the width across platforms that provide the type.
+
