@@ -2,7 +2,7 @@
 
 In C++, **arrays** and **vectors** are both used to store collections of items, but they have key differences in terms of flexibility, performance, and use cases. Here's a concise comparison:
 
-## Array (`std::array` and Raw Arrays)
+## Array (`std::array<T, N>` and Raw Arrays)
 
 * **Definition**: A fixed-size collection of elements of the same type. C++ provides both C-style raw arrays (`T[]`) and the modern `std::array<T, N>` container.
 * **Key Characteristics**:
