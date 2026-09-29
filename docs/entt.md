@@ -728,3 +728,49 @@ If you're starting out, you don't need to learn the entire EnTT API. I'd focus o
 
 Once these make sense, **most of the basic EnTT ECS model becomes much easier to understand**.
 
+### Clarification
+
+* `registry.all_of<T>(entity)` asks about **one specific entity**.
+* `registry.view<T>()` creates a query for **all entities that have component T**.
+* `view.each()` lets you process **all entities matching a component query**.
+
+| API                          | What it does                                          | Scope         |
+| ---------------------------- | ----------------------------------------------------- | ------------- |
+| `registry.all_of<T>(entity)` | Checks whether **one specific entity** has `T`        | One entity    |
+| `registry.view<T>()`         | Creates a **query/view** for entities that have `T`   | Many entities |
+| `view.each()`                | **Iterates** through the entities matched by the view | Many entities |
+
+### `all_of`
+
+```cpp
+registry.all_of<PositionComp, VelocityComp>(entity)
+```
+
+means: **"Does this entity have these components?"**
+
+### `view`
+
+```cpp
+registry.view<PositionComp, VelocityComp>()
+```
+
+means: **"Which entities have these components?"**
+
+```cpp
+view.each()
+```
+
+means: **"Give me those entities and their components so I can process them."**
+
+So for an ECS system, you'll very commonly see:
+
+```cpp
+auto view = registry.view<ComponentA, ComponentB>();
+
+for (auto [entity, a, b] : view.each())
+{
+    // operate on entities having A and B
+}
+```
+
+That's one of the fundamental patterns you'll use repeatedly with EnTT.
