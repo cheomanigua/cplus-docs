@@ -4,168 +4,15 @@
 
 ```bash
 wget https://raw.githubusercontent.com/skypjack/entt/refs/heads/main/single_include/entt/entt.hpp
+or
+curl -L -o entt.hpp "https://raw.githubusercontent.com/skypjack/entt/refs/heads/main/single_include/entt/entt.hpp"
 ```
-
-# Basics
-
-```cpp
-#include "entt.hpp"
-
-struct PositionComp {
-    float x{}, y{};
-};
-
-void movementSystem(entt::registry& registry, float deltaTime)
-{
-    // Query entities that have a PositionComp component.
-    auto view = registry.view<PositionComp>();
-
-    for (auto [entity, position] : view.each())
-    {
-        position.x += 1.0f * deltaTime;
-        position.y += 1.0f * deltaTime;
-    }
-}
-```
-
-is the same as:
-
-```cpp
-#include "entt.hpp"
-     
-struct PositionComp {
-    float x{}, y{};
-};
- 
-void movementSystem(entt::registry& registry, float deltaTime)
-{
-    // Query entities that have a PositionComp component.
-    auto view = registry.view<PositionComp>();
- 
-    for (auto entity : view)
-    {
-        auto& position = view.get<PositionComp>(entity);
- 
-        position.x += 1.0f * deltaTime;
-        position.y += 1.0f * deltaTime;
-    }
-}
-```
-
-### Example
-
-```cpp
-#include "entt.hpp"
-#include <iostream>
-
-struct PositionComp {
-    float x{}, y{};
-};
-
-void printPositions(entt::registry& registry)
-{
-    auto view = registry.view<PositionComp>();
-
-    for (auto [entity, position] : view.each())
-    {
-        std::cout << "Entity " << static_cast<uint32_t>(entt::to_entity(entity)) // VERSION 1
-        std::cout << "Entity " << entt::to_entity(entity) // VERSION 2
-        std::cout << "Entity " << entt::to_integral(entity) // VERSION 3
-                  << ": "
-                  << position.x << ", "
-                  << position.y << "\n";
-    }
-    std::cout << "\n";
-}
-
-int main()
-{
-    entt::registry registry{};
-    std::vector<entt::entity> entities{};
-
-    // Create entities 0, 1, 2, 3, 4.
-    for (int i = 0; i < 5; ++i)
-    {
-        auto entity = registry.create();
-        entities.push_back(entity);
-
-        registry.emplace<PositionComp>(
-            entity,
-            static_cast<float>(i),
-            static_cast<float>(i)
-        );
-    }
-
-    std::cout << "Before destruction:\n";
-    printPositions(registry);
-
-    std::cout << "After destruction of Entity 1:\n";
-    registry.destroy(entities[1]);
-    printPositions(registry);
-
-    std::cout << "After creating a new entity:\n";
-    auto newEntity = registry.create();
-    registry.emplace<PositionComp>(
-        newEntity,
-        5.0f,
-        5.0f
-    );
-    printPositions(registry);
-}
-```
-
-Output:
-
-- **Version 1 & 2**
-
-```text
-Before destruction:
-Entity 4: 4, 4
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 1: 1, 1
-Entity 0: 0, 0
-
-After destruction of Entity 1:
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 4: 4, 4
-Entity 0: 0, 0
-
-After creating a new entity:
-Entity 1: 5, 5
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 4: 4, 4
-Entity 0: 0, 0
-```
-
-- **Version 3**
-
-```text
-Before destruction:
-Entity 4: 4, 4
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 1: 1, 1
-Entity 0: 0, 0
-
-After destruction of Entity 1:
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 4: 4, 4
-Entity 0: 0, 0
-
-After creating a new entity:
-Entity 1048577: 5, 5
-Entity 3: 3, 3
-Entity 2: 2, 2
-Entity 4: 4, 4
-Entity 0: 0, 0
-```
-As you can see, **EnTT** recycles the entities, in this case Entity 1 / Entity 1048577.
 
 # API
+
+[!NOTE]
+<strong>NOTE</strong>
+Below it is the most common API used in <strong>EnTT</strong>. For a full example, go the to the <a href="/#entt#example">Example</a> section of this page.
 
 - **Entity** = an ID
 - **Component** = data attached to an entity
@@ -207,9 +54,7 @@ struct Health {
 };
 ```
 
-Notice that there's no inheritance or special EnTT code here.
-
-They're just C++ structs.
+Notice that there's no inheritance or special EnTT code here. They're just C++ structs.
 
 ## 2. Create a registry
 
@@ -255,7 +100,7 @@ auto bullet = registry.create();
 
 ## 4. Add a component
 
-Use `emplace`:
+Use `emplace` to add components to an entity:
 
 ```cpp
 registry.emplace<Position>(player, 10.0f, 20.0f);
@@ -388,11 +233,9 @@ This is important because EnTT can **reuse entity identifiers** later.
 
 That's related to the `to_entity()` vs `to_integral()` question you were asking earlier.
 
-## 9. Create a view
+## 9. Create a query (view)
 
-This is one of the most important parts.
-
-Suppose:
+This is one of the most important parts. You can query EnTT to fetch all entities with a particular component:
 
 ```cpp
 auto view = registry.view<Position>();
@@ -400,9 +243,9 @@ auto view = registry.view<Position>();
 
 This means:
 
-> Give me entities that have a `Position` component.
+> Give me entities that have a `Position` component and store them in `view`.
 
-Then:
+So, now you have the query in `view`. Now you can process the query and implement whatever feature you need to implement. Following the above query, now we calculate the position of each entity fetched from the query:
 
 ```cpp
 for (auto [entity, position] : view.each())
@@ -411,29 +254,9 @@ for (auto [entity, position] : view.each())
 }
 ```
 
-Conceptually:
-
-```text
-Registry
-
-Player ─────── Position
-Enemy  ─────── Position
-Bullet ─────── Position
-Camera ─────── no Position
-
-
-view<Position>
-
-        ↓
-
-Player
-Enemy
-Bullet
-```
-
 ## 10. Query multiple components
 
-This is where ECS becomes particularly useful.
+You can also query more than one component. This is where ECS becomes particularly useful.
 
 ```cpp
 auto view = registry.view<Position, Velocity>();
@@ -513,35 +336,8 @@ Whereas iterating the view itself can give you the **component(s)** without expl
 
 ## 12. Get the entity ID
 
-You already encountered this:
-
-```cpp
-entt::to_entity(entity)
-```
-
-For example:
-
-```cpp
-std::cout << entt::to_entity(entity);
-```
-
-Remember:
-
-```cpp
-entt::to_entity(entity)
-```
-
-means:
-
-> Give me the entity identifier/index.
-
-Whereas:
-
-```cpp
-entt::to_integral(entity)
-```
-
-gives you the complete underlying representation, including the version/generation information.
+- `entt::to_entity(entity)`: Give me the entity identifier/index.
+- `entt::to_integral(entity)`: Gives you the complete underlying representation, including the version/generation information.
 
 ## 13. Tags / empty components
 
@@ -638,7 +434,7 @@ if (registry.valid(entity))
 
 This becomes useful when dealing with entities whose lifetime isn't guaranteed.
 
-## 17. A small complete example
+## Example
 
 Putting the important pieces together:
 
@@ -675,18 +471,16 @@ int main()
     // Query entities with Position + Velocity
     auto view = registry.view<Position, Velocity>();
 
-    for (auto [entity, position, velocity] : view.each())
+    // Process result of query
+    for (auto [entity, pos, vel] : view.each())
     {
-        position.x += velocity.x;
-        position.y += velocity.y;
+        pos.x += vel.x;
+        pos.y += vel.y;
 
-        std::cout
-            << "Entity "
-            << entt::to_entity(entity)
-            << ": "
-            << position.x << ", "
-            << position.y
-            << '\n';
+        std::cout << "Entity "
+                    << entt::to_entity(entity) << ": "
+                    << pos.x << ", "
+                    << pos.y << "\n";
     }
 }
 ```
@@ -720,6 +514,7 @@ If you're starting out, you don't need to learn the entire EnTT API. I'd focus o
 | `registry.get<T>()`     | Get component                        |
 | `registry.remove<T>()`  | Remove component                     |
 | `registry.all_of<T>()`  | Check component                      |
+| `registry.any_of<T>()`  | Check components                     |
 | `registry.view<T>()`    | Query entities                       |
 | `view.each()`           | Iterate entity + components          |
 | `registry.valid()`      | Check entity validity                |
@@ -731,12 +526,14 @@ Once these make sense, **most of the basic EnTT ECS model becomes much easier to
 ### Clarification
 
 * `registry.all_of<T>(entity)` asks about **one specific entity**.
+* `registry.any_of<T>(entity)` asks about **one specific entity**.
 * `registry.view<T>()` creates a query for **all entities that have component T**.
 * `view.each()` lets you process **all entities matching a component query**.
 
 | API                          | What it does                                          | Scope         |
 | ---------------------------- | ----------------------------------------------------- | ------------- |
 | `registry.all_of<T>(entity)` | Checks whether **one specific entity** has `T`        | One entity    |
+| `registry.any_of<T>(entity)` | Checks whether **one specific entity** has at least one of `T`        | One entity    |
 | `registry.view<T>()`         | Creates a **query/view** for entities that have `T`   | Many entities |
 | `view.each()`                | **Iterates** through the entities matched by the view | Many entities |
 
@@ -747,6 +544,14 @@ registry.all_of<PositionComp, VelocityComp>(entity)
 ```
 
 means: **"Does this entity have these components?"**
+
+### `any_of`
+
+```cpp
+registry.any_of<PositionComp, VelocityComp>(entity)
+```
+
+means: **"Does this entity have at least one of these components?"**
 
 ### `view`
 
