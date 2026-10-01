@@ -79,16 +79,14 @@ registry
 ## 3. Create an entity
 
 ```cpp
-auto entity = registry.create();
-```
-
-Now you have an EnTT entity:
-
-```cpp
-entt::entity entity;
+entt::entity entity = registry.create();;
 ```
 
 You normally let `auto` handle the type.
+
+```cpp
+auto entity = registry.create();
+```
 
 You can create multiple entities:
 
