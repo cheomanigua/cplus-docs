@@ -96,7 +96,26 @@ auto enemy  = registry.create();
 auto bullet = registry.create();
 ```
 
-## 4. Add a component
+## 4. Get the entity ID
+
+- `entt::to_entity(entity)`: Give me the entity identifier/index.
+- `entt::to_integral(entity)`: Gives you the complete underlying representation, including the version/generation information.
+
+## 5. Destroy an entity
+
+```cpp
+registry.destroy(enemy);
+or
+registry.destroy(static_cast<entt::entity>(i));
+```
+
+The entity and its components are removed from the registry.
+
+[!NOTE]
+<strong>NOTE</strong>
+This is important because EnTT can <strong>reuse entity identifiers</strong> later.
+
+## 6. Add a component
 
 Use `emplace` to add components to an entity:
 
@@ -151,7 +170,7 @@ bullet
 
 That's the core ECS idea.
 
-## 5. Get a component
+## 7. Get a component
 
 If you already know an entity has a component:
 
@@ -175,7 +194,7 @@ position.x += velocity.x;
 position.y += velocity.y;
 ```
 
-## 6. Check whether an entity has a component
+## 8. Check a component
 
 Use `all_of`:
 
@@ -204,7 +223,7 @@ if (registry.any_of<Position, Velocity>(player))
 }
 ```
 
-## 7. Remove a component
+## 9. Remove a component
 
 ```cpp
 registry.remove<Velocity>(player);
@@ -219,19 +238,8 @@ player
 
 `Velocity` is gone.
 
-## 8. Destroy an entity
 
-```cpp
-registry.destroy(enemy);
-```
-
-The entity and its components are removed from the registry.
-
-This is important because EnTT can **reuse entity identifiers** later.
-
-That's related to the `to_entity()` vs `to_integral()` question you were asking earlier.
-
-## 9. Create a query (view)
+## 10. Create a query (view)
 
 This is one of the most important parts. You can query EnTT to fetch all entities with a particular component:
 
@@ -252,7 +260,7 @@ for (auto [entity, position] : view.each())
 }
 ```
 
-## 10. Query multiple components
+## 11. Query multiple components
 
 You can also query more than one component. This is where ECS becomes particularly useful.
 
@@ -305,7 +313,7 @@ void movementSystem(entt::registry& registry, float dt)
 }
 ```
 
-## 11. View without the entity
+## 12. View without the entity
 
 Sometimes you don't care about the entity ID.
 
@@ -331,11 +339,6 @@ for (auto [entity, position] : view.each())
 gives you the **entity + component**.
 
 Whereas iterating the view itself can give you the **component(s)** without explicitly asking for the entity.
-
-## 12. Get the entity ID
-
-- `entt::to_entity(entity)`: Give me the entity identifier/index.
-- `entt::to_integral(entity)`: Gives you the complete underlying representation, including the version/generation information.
 
 ## 13. Tags / empty components
 
