@@ -111,6 +111,12 @@ The Flecs `world` takes the role that the EnTT `registry` plays.
 ## 3. Create an entity
 
 ```cpp
+flecs::entity entity = world.entity();
+```
+
+You normally let `auto` handle the type.
+
+```cpp
 auto entity = world.entity();
 ```
 
@@ -329,14 +335,13 @@ Now you're saying:
 
 Then:
 
+### `query.each`
+
 ```cpp
-query.each([](
-    flecs::entity entity,
-    Position& position,
-    Velocity& velocity)
+query.each([](flecs::entity entity, Position& pos, Velocity& vel)
 {
-    position.x += velocity.x;
-    position.y += velocity.y;
+    pos.x += vel.x;
+    pos.y += vel.y;
 });
 ```
 
@@ -363,16 +368,78 @@ void movementSystem(flecs::world& world, float dt)
 {
     auto query = world.query<Position, Velocity>();
 
-    query.each([dt](
-        flecs::entity entity,
-        Position& position,
-        Velocity& velocity)
+    query.each([dt](flecs::entity entity, Position& pos, Velocity& vel)
     {
-        position.x += velocity.x * dt;
-        position.y += velocity.y * dt;
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
     });
 }
 ```
+### `query.find`
+
+`query.find` uses the same query to search for the first entity that satisfies a condition, but **it stops interation when a condition is met**:
+
+```cpp
+auto entity = query.find([](Position& pos, Velocity& vel)
+{
+    return pos.x > 100.0f;
+});
+```
+
+The callback returns `true` when the entity you're looking for is found. Flecs then stops iterating and returns that entity.
+
+Conceptually:
+
+```text
+Player
+ ├── Position  ← yes
+ └── Velocity  ← yes
+      ↓
+   condition false
+      ↓
+   keep searching
+
+Enemy
+ ├── Position  ← yes
+ └── Velocity  ← yes
+      ↓
+   condition true
+      ↓
+    FOUND → stop
+```
+
+So for an ECS system, you might see:
+
+```cpp
+void selectEntity(flecs::world& world, Vector2 mousePos)
+{
+    auto query = world.query<Position, SelectionBounds>();
+
+    auto entity = query.find([&](Position& pos, SelectionBounds& bounds)
+    {
+        return CheckCollisionPointCircle(mousePos, pos.position, bounds.radius);
+    });
+
+    if (entity)
+    {
+        entity.add<TagSelected>();
+    }
+}
+```
+
+Conceptually:
+
+```text
+query.each()
+    → process every matching entity
+
+query.find()
+    → search matching entities
+    → stop at the first entity satisfying the condition
+    → return that entity
+```
+
+So `query.each` is generally for **processing all matching entities**, while `query.find` is for **finding one matching entity**.
 
 ## 13. Query without the entity
 
@@ -383,9 +450,9 @@ You can simply omit it from the callback:
 ```cpp
 auto query = world.query<Position>();
 
-query.each([](Position& position)
+query.each([](Position& pos)
 {
-    position.x += 1.0f;
+    pos.x += 1.0f;
 });
 ```
 
@@ -396,12 +463,10 @@ For example:
 ```cpp
 auto query = world.query<Position, Velocity>();
 
-query.each([](
-    Position& position,
-    Velocity& velocity)
+query.each([](Position& pos, Velocity& vel)
 {
-    position.x += velocity.x;
-    position.y += velocity.y;
+    pos.x += vel.x;
+    pos.y += vel.y;
 });
 ```
 
@@ -580,18 +645,15 @@ int main()
     auto query = world.query<Position, Velocity>();
 
     // Process result of query
-    query.each([](
-        flecs::entity entity,
-        Position& position,
-        Velocity& velocity)
+    query.each([](flecs::entity entity, Position& pos, Velocity& vel)
     {
-        position.x += velocity.x;
-        position.y += velocity.y;
+        pos.x += vel.x;
+        pos.y += vel.y;
 
         std::cout << "Entity "
                   << entity.id() << ": "
-                  << position.x << ", "
-                  << position.y << "\n";
+                  << pos.x << ", "
+                  << pos.y << "\n";
     });
 }
 ```
@@ -627,7 +689,8 @@ If you're starting out, you don't need to learn the entire Flecs API. I'd focus 
 | `entity.remove<T>()`  | Remove component      |
 | `entity.has<T>()`     | Check component       |
 | `world.query<T>()`    | Create query          |
-| `query.each()`        | Iterate query results |
+| `query.each()`        | Iterate query results (all) |
+| `query.find()`        | Iterate query results (not all) |
 | `entity.is_alive()`   | Check entity validity |
 | `entity.id()`         | Get entity identifier |
 
@@ -641,9 +704,7 @@ There is an important difference between checking one entity and querying many e
 entity.has<Position>()
 ```
 
-means:
-
-> **Does this specific entity have `Position`?**
+means: **Does this specific entity have `Position`?**
 
 Whereas:
 
@@ -651,9 +712,7 @@ Whereas:
 world.query<Position>()
 ```
 
-means:
-
-> **Which entities have `Position`?**
+means: **Which entities have `Position`?**
 
 And:
 
@@ -661,75 +720,128 @@ And:
 query.each(...)
 ```
 
-means:
-
-> **Process every entity matched by the query.**
+means: **Process every entity matched by the query.**
 
 | API                | What it does                                       | Scope         |
 | ------------------ | -------------------------------------------------- | ------------- |
 | `entity.has<T>()`  | Checks whether **one specific entity** has `T`     | One entity    |
 | `world.query<T>()` | Creates a **query** for entities that have `T`     | Many entities |
-| `query.each()`     | **Iterates** through entities matched by the query | Many entities |
+| `query.each()`     | **Iterates** through **ALL** entities matched by the query | Many entities |
+| `query.find()`     | **Iterates** through entities matched by the query dondition met | Many entities |
 
 ### `has`
+
+**"Does this entity have `Position`?"**
 
 ```cpp
 entity.has<Position>()
 ```
 
-means:
-
-**"Does this entity have `Position`?"**
-
+**"Does this entity have `Position` AND `Velocity`?"**
 For multiple components:
 
 ```cpp
 entity.has<Position, Velocity>()
 ```
 
-means:
-
-**"Does this entity have `Position` AND `Velocity`?"**
-
 ### `query`
+
+**"Which entities have `Position` AND `Velocity`?"**
 
 ```cpp
 auto query = world.query<Position, Velocity>();
 ```
 
-means:
-
-**"Which entities have `Position` AND `Velocity`?"**
-
 ### `query.each`
 
+**"Give me each matching entity and its components so I can process them."**
+
 ```cpp
-query.each([](
-    flecs::entity entity,
-    Position& position,
-    Velocity& velocity)
+query.each([](flecs::entity entity, Position& position, Velocity& velocity)
 {
     // operate on entities having Position and Velocity
 });
 ```
-
-means:
-
-**"Give me each matching entity and its components so I can process them."**
 
 So for an ECS system, you'll very commonly see:
 
 ```cpp
 auto query = world.query<ComponentA, ComponentB>();
 
-query.each([](
-    flecs::entity entity,
-    ComponentA& a,
-    ComponentB& b)
+query.each([](flecs::entity entity, ComponentA& a, ComponentB& b)
 {
     // operate on entities having A and B
 });
 ```
+
+### `query.find`
+
+**"Search the matching entities and return the first one that satisfies my condition."**
+
+```cpp
+auto entity = query.find([](Position& position, SelectionBounds& bounds)
+{
+    return CheckCollisionPointCircle(mousePos, position.position, bounds.radius);
+});
+```
+
+So for an ECS system, you'll commonly see:
+
+```cpp
+auto query = world.query<ComponentA, ComponentB>();
+
+auto entity = query.find([](ComponentA& a, ComponentB& b)
+{
+    return /* condition */;
+});
+
+if (entity)
+{
+    // operate on the first entity matching the condition
+}
+```
+
+The key distinction is:
+
+```text
+query.each()
+    → process every matching entity
+
+query.find()
+    → search matching entities
+    → stop at the first one satisfying the condition
+    → return that entity
+```
+
+For your mouse-selection example:
+
+```cpp
+auto query = world.query<Position, SelectionBounds>();
+
+auto entity = query.find([&](Position& position, SelectionBounds& bounds)
+{
+    return CheckCollisionPointCircle(mousePos, position.position, bounds.radius);
+});
+
+if (entity)
+    entity.add<TagSelected>();
+```
+
+That's essentially Flecs's equivalent of your EnTT:
+
+```cpp
+for (auto [entity, position, bounds] : view.each())
+{
+    if (CheckCollisionPointCircle(mousePos, position.position, bounds.radius))
+    {
+        registry.emplace<TagSelected>(entity);
+        break;
+    }
+}
+```
+
+The important concept is that **`find` is a search, not a general iteration mechanism**. The callback's return value determines whether the current entity is the one you're looking for.
+
 
 That's one of the fundamental patterns you'll use repeatedly with Flecs.
 
