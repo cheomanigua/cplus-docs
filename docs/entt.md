@@ -225,21 +225,21 @@ if (registry.any_of<Position, Velocity>(player))
 
 ## 9. Remove a component
 
+Remove a component from one entity.
+
 ```cpp
 registry.remove<Velocity>(player);
 ```
 
-Now:
+## 10. Clear a component
 
-```text
-player
- └── Position
+Remove a component from all entities in the registry.
+
+```cpp
+registry.clear<TagSelected>();
 ```
 
-`Velocity` is gone.
-
-
-## 10. Create a query (view)
+## 11. Create a query (view)
 
 This is one of the most important parts. You can query EnTT to fetch all entities with a particular component:
 
@@ -260,7 +260,7 @@ for (auto [entity, position] : view.each())
 }
 ```
 
-## 11. Query multiple components
+## 12. Query multiple components
 
 You can also query more than one component. This is where ECS becomes particularly useful.
 
@@ -313,7 +313,7 @@ void movementSystem(entt::registry& registry, float dt)
 }
 ```
 
-## 12. View without the entity
+## 13. View without the entity
 
 Sometimes you don't care about the entity ID.
 
@@ -340,7 +340,7 @@ gives you the **entity + component**.
 
 Whereas iterating the view itself can give you the **component(s)** without explicitly asking for the entity.
 
-## 13. Tags / empty components
+## 14. Tags / empty components
 
 A component doesn't need to contain data.
 
@@ -387,7 +387,7 @@ means:
 
 You don't need a `bool selected` inside another component.
 
-## 14. Remove tags
+## 15. Remove tags
 
 Same API:
 
@@ -395,7 +395,7 @@ Same API:
 registry.remove<Selected>(entity);
 ```
 
-## 15. Replace/update a component
+## 16. Replace/update a component
 
 You can use `replace`:
 
@@ -424,7 +424,7 @@ auto& health = registry.get<Health>(enemy);
 health.value = 50;
 ```
 
-## 16. Check whether an entity is valid
+## 17. Check whether an entity is valid
 
 ```cpp
 if (registry.valid(entity))
@@ -434,6 +434,25 @@ if (registry.valid(entity))
 ```
 
 This becomes useful when dealing with entities whose lifetime isn't guaranteed.
+
+## 18. Clear the registry
+
+Remove all entities and all components from the registry:
+
+```cpp
+registry.clear();
+```
+
+This is useful in you load a new level, for instance.
+
+## 19. Remove vs Clear vs Destroy
+
+| Code                                   | Effect                                     |
+| -------------------------------------- | ------------------------------------------ |
+| `registry.remove<TagSelected>(entity)` | Remove `TagSelected` from **one entity**   |
+| `registry.clear<TagSelected>()`        | Remove `TagSelected` from **all entities** |
+| `registry.destroy(entity)`             | Destroy **one entity and its components**  |
+| `registry.clear()`                     | Clear **the entire registry**              |
 
 ## Example
 
@@ -501,6 +520,7 @@ enemy
        ↓
      excluded
 ```
+
 
 ## The EnTT API I'd learn first
 

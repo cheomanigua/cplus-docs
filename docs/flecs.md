@@ -276,20 +276,21 @@ For component presence checks on a specific entity, `has<T>()` is the Flecs equi
 
 ## 9. Remove a component
 
+Remove a component from one entity.
+
 ```cpp
 player.remove<Velocity>();
 ```
 
-Now:
+## 10. Clear a component
 
-```text
-player
- └── Position
+Remove a component from all entities in the registry.
+
+```cpp
+world.remove_all<TagSelected>()
 ```
 
-`Velocity` is gone.
-
-## 10. Create a query
+## 11. Create a query
 
 This is one of the most important parts of Flecs.
 
@@ -314,7 +315,7 @@ query.each([](flecs::entity entity, Position& position)
 
 The query matches all entities that have `Position`.
 
-## 11. Query multiple components
+## 12. Query multiple components
 
 You can query more than one component:
 
@@ -373,7 +374,7 @@ void movementSystem(flecs::world& world, float dt)
 }
 ```
 
-## 12. Query without the entity
+## 13. Query without the entity
 
 Sometimes you don't need the entity ID.
 
@@ -422,7 +423,7 @@ query.each([](Position& position)
 });
 ```
 
-## 13. Tags / empty components
+## 14. Tags / empty components
 
 A component doesn't need to contain data.
 
@@ -472,7 +473,7 @@ means:
 
 You don't need a `bool selected` inside another component.
 
-## 14. Remove tags
+## 15. Remove tags
 
 Tags use the same `remove` API:
 
@@ -480,7 +481,7 @@ Tags use the same `remove` API:
 entity.remove<Selected>();
 ```
 
-## 15. Replace/update a component
+## 16. Replace/update a component
 
 In Flecs, `set` can be used to add or replace a component value:
 
@@ -510,7 +511,7 @@ auto* health = enemy.get_mut<Health>();
 health->value = 50;
 ```
 
-## 16. Check whether an entity is alive
+## 17. Check whether an entity is alive
 
 Use `is_alive()`:
 
@@ -522,6 +523,23 @@ if (entity.is_alive())
 ```
 
 This becomes useful when dealing with entities whose lifetime isn't guaranteed.
+
+## 18. Reset the registry
+
+Remove all entities and all components from the registry:
+
+```cpp
+world.reset();
+```
+
+## 19. Remove vs Reset vs Destruct
+
+| Code                               | Effect                                     |
+| ---------------------------------- | ------------------------------------------ |
+| `entity.remove<TagSelected>()`     | Remove `TagSelected` from **one entity**   |
+| `world.remove_all<TagSelected>()`  | Remove `TagSelected` from **all entities** |
+| `entity.destruct()`                | Destroy **one entity and its components**  |
+| `world.reset()`                    | Reset **the entire world**                 |
 
 ## Example
 
