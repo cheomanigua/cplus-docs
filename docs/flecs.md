@@ -133,6 +133,8 @@ Flecs generates the entity IDs for you.
 ## 4. Get the entity ID
 
 ```cpp
+auto id = ecs_entity_t_lo(entity.id());
+or
 auto id = entity.id();
 ```
 
@@ -141,7 +143,7 @@ The ID is the underlying Flecs entity identifier.
 For example:
 
 ```cpp
-std::cout << entity.id() << "\n";
+std::cout << ecs_entity_to_lo(entity.id()) << "\n";
 ```
 
 Unlike EnTT, you generally don't need a separate `to_entity()` function.
@@ -636,7 +638,6 @@ int main()
 
     // Add components
     player.set<Position>({0.0f, 0.0f});
-
     player.set<Velocity>({5.0f, 2.0f});
 
     enemy.set<Position>({100.0f, 50.0f});
@@ -651,10 +652,19 @@ int main()
         pos.y += vel.y;
 
         std::cout << "Entity "
-                  << entity.id() << ": "
+                  << ecs_entity_t_lo(entity.id()) << ": "
                   << pos.x << ", "
                   << pos.y << "\n";
     });
+
+    // Create entities and add components in loop
+    for(std::size_t i = 0; i < 5; ++i) {
+        auto entity = world.entity();
+        entity.set<Position>({static_cast<float>(i), static_cast<float>(i)});
+    }
+ 
+    // Destroy entity created in loop
+    world.entity(520).destruct();
 }
 ```
 

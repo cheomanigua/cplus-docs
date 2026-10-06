@@ -502,6 +502,15 @@ int main()
                     << pos.x << ", "
                     << pos.y << "\n";
     }
+
+    // Create entities and add components in loop
+    for(std::size_t i = 0; i < 5; ++i) {
+        auto entity = reg.create();
+        reg.emplace<Position>(entity, static_cast<float>(i), static_cast<float>(i));
+    }
+ 
+    // Destroy entity created in loop
+    reg.destroy(static_cast<entt::entity>(1));
 }
 ```
 
