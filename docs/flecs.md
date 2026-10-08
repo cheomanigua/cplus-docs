@@ -225,31 +225,32 @@ That's the core ECS idea.
 
 ## 7. Get a component
 
-If you already know an entity has a component:
+If you already know an entity has a component, you can use `get` when you don't need to modify the component:
 
 ```cpp
-auto* position = player.get_mut<Position>();
+const auto& pos = player.get<Position>();
 
-position->x += 10.0f;
+std::println("Position: {}, {}", pos.x, pos.y);
 ```
+For systems and queries, however, you will usually access multiple components directly through the [query callback](#flecs#11.-create-a-query).
 
-You can also use `get` when you don't need to modify the component:
+If you have to modify the component, you can use `get_mut`:
 
 ```cpp
-const auto* position = player.get<Position>();
+auto* pos = player.get_mut<Position>();
+
+pos->x += 10.0f;
 ```
 
 For multiple components, you can get them individually:
 
 ```cpp
-auto* position = player.get_mut<Position>();
-auto* velocity = player.get_mut<Velocity>();
+auto* pos = player.get_mut<Position>();
+auto* vel = player.get_mut<Velocity>();
 
-position->x += velocity->x;
-position->y += velocity->y;
+pos->x += vel->x;
+pos->y += vel->y;
 ```
-
-For systems and queries, however, you will usually access multiple components directly through the query callback.
 
 ## 8. Check a component
 
