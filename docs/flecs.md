@@ -369,22 +369,6 @@ query.each([](Position& pos, const Velocity& vel)
 });
 ```
 
-Conceptually:
-
-```text
-Player
- ├── Position  ← yes
- └── Velocity  ← yes
-       ↓
-     included
-
-Enemy
- ├── Position  ← yes
- └── Health    ← no Velocity
-       ↓
-     excluded
-```
-
 This is essentially an ECS system:
 
 ```cpp
@@ -405,6 +389,11 @@ int main() {
 }
 ```
 
+[!NOTE]
+<strong>NOTE</strong>
+Note how the function parameter <code>dt</code> is added in the query loop:
+<code>query.each([dt](Position& pos, const Velocity& vel)</code>
+
 ### `query.find`
 
 `query.find` uses the same query to search for the first entity that satisfies a condition, but **it stops interation when a condition is met**:
@@ -417,26 +406,6 @@ auto entity = query.find([](Position& pos, Velocity& vel)
 ```
 
 The callback returns `true` when the entity you're looking for is found. Flecs then stops iterating and returns that entity.
-
-Conceptually:
-
-```text
-Player
- ├── Position  ← yes
- └── Velocity  ← yes
-      ↓
-   condition false
-      ↓
-   keep searching
-
-Enemy
- ├── Position  ← yes
- └── Velocity  ← yes
-      ↓
-   condition true
-      ↓
-    FOUND → stop
-```
 
 So for an ECS system, you might see:
 
@@ -469,7 +438,9 @@ query.find()
     → return that entity
 ```
 
-So `query.each` is generally for **processing all matching entities**, while `query.find` is for **finding one matching entity**.
+[!TIP]
+<strong>TIP</strong>
+<code>query.each</code> is generally for <strong>processing all matching entities</strong>, while <code>query.find</code> is for <strong>finding one matching entity</strong>.
 
 ## 13. Query without the entity
 
@@ -654,38 +625,37 @@ struct Velocity {
     float x{}, y{};
 };
  
-void movementSystem(flecs::query<Position, const Velocity>& query, float dt)
+void movementSystem(flecs::query<Position, const Velocity>& q, float dt)
 {
-    query.each([dt](Position& pos, const Velocity& vel) {
+    q.each([dt](Position& pos, const Velocity& vel) {
         pos.x += vel.x * dt;
         pos.y += vel.y * dt;
     });
 }
  
-void printPos(flecs::query<const Position>& query)
+void printPos(flecs::query<const Position>& q)
 {
-    query.each([](flecs::entity e, const Position& pos) {
+    q.each([](flecs::entity e, const Position& pos) {
         std::println("Entity {}: {}, {}", e.id(), pos.x, pos.y);
     });
 }
  
 int main()
 {
-    constexpr float dt = 1.0f / 60.0f;
     flecs::world world;
-    auto qPos = world.query_builder<const Position>().cached().build();
-    auto qMov = world.query_builder<Position, const Velocity>().cached().build();
+    constexpr float dt {1.0f / 60.0f};
+    auto posQ = world.query<const Position>();
+    auto movQ = world.query_builder<Position, const Velocity>().cached().build();
  
     for (std::size_t i = 0; i < 5; ++i) {
         auto e = world.entity();
         e.set<Position>({static_cast<float>(i), static_cast<float>(i)});
         e.set<Velocity>({static_cast<float>(i), static_cast<float>(i)});
     }
- 
-    printPos(qPos);
+    printPos(posQ);
  
     for (std::size_t frame = 0; frame < 60; ++frame) {
-        movementSystem(qMov, dt);
+        movementSystem(movQ, dt);
     }
     printPos(qPos);
 }
