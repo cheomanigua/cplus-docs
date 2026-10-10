@@ -328,10 +328,10 @@ Both queries mean:
 You can then process the query:
 
 ```cpp
-query.each([](Position& position)
+query.each([](Position& pos)
 {
-    position.x += 1.0f;
-    position.y += 1.0f;
+    pos.x += 1.0f;
+    pos.y += 1.0f;
 });
 ```
 or
@@ -362,7 +362,7 @@ Then:
 ### `query.each`
 
 ```cpp
-query.each([](const Position& pos, const Velocity& vel)
+query.each([](Position& pos, const Velocity& vel)
 {
     pos.x += vel.x;
     pos.y += vel.y;
@@ -388,10 +388,9 @@ Enemy
 This is essentially an ECS system:
 
 ```cpp
-void movementSystem(const flecs::query<Position, Velocity>& query, float dt)
+void movementSystem(flecs::query<Position, const Velocity>& query, float dt)
 {
-
-    query.each([dt](Position& pos, Velocity& vel)
+    query.each([dt](Position& pos, const Velocity& vel)
     {
         pos.x += vel.x * dt;
         pos.y += vel.y * dt;
@@ -400,7 +399,9 @@ void movementSystem(const flecs::query<Position, Velocity>& query, float dt)
 
 int main() {
     flecs::world world;
-    auto query = world.query_builder<Position, Velocity>().cached().build();
+    constexpr float dt {1.0f / 60.0f};
+    auto query = world.query_builder<Position, const Velocity>().cached().build();
+    movementSystem(query, dt);
 }
 ```
 
@@ -640,75 +641,54 @@ world.reset();
 Putting the important pieces together:
 
 ```cpp
+#include <cstddef>
+#include <print>
+ 
 #include "flecs.h"
-#include <iostream>
-
-struct Position
-{
-    float x{};
-    float y{};
+ 
+struct Position {
+    float x{}, y{};
 };
-
-struct Velocity
-{
-    float x{};
-    float y{};
+ 
+struct Velocity {
+    float x{}, y{};
 };
-
+ 
+void movementSystem(flecs::query<Position, const Velocity>& query, float dt)
+{
+    query.each([dt](Position& pos, const Velocity& vel) {
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
+    });
+}
+ 
+void printPos(flecs::query<const Position>& query)
+{
+    query.each([](flecs::entity e, const Position& pos) {
+        std::println("Entity {}: {}, {}", e.id(), pos.x, pos.y);
+    });
+}
+ 
 int main()
 {
+    constexpr float dt = 1.0f / 60.0f;
     flecs::world world;
-
-    // Create entities
-    auto player = world.entity();
-    auto enemy  = world.entity();
-
-    // Add components
-    player.set<Position>({0.0f, 0.0f});
-    player.set<Velocity>({5.0f, 2.0f});
-
-    enemy.set<Position>({100.0f, 50.0f});
-
-    // Query entities with Position + Velocity
-    auto query = world.query_builder<Position, Velocity>().cached().build();
-
-    // Process result of query
-    query.each([](flecs::entity entity, Position& pos, Velocity& vel)
-    {
-        pos.x += vel.x;
-        pos.y += vel.y;
-
-        std::cout << "Entity "
-                  << ecs_entity_t_lo(entity.id()) << ": "
-                  << pos.x << ", "
-                  << pos.y << "\n";
-    });
-
-    // Create entities and add components in loop
-    for(std::size_t i = 0; i < 5; ++i) {
-        auto entity = world.entity();
-        entity.set<Position>({static_cast<float>(i), static_cast<float>(i)});
+    auto qPos = world.query_builder<const Position>().cached().build();
+    auto qMov = world.query_builder<Position, const Velocity>().cached().build();
+ 
+    for (std::size_t i = 0; i < 5; ++i) {
+        auto e = world.entity();
+        e.set<Position>({static_cast<float>(i), static_cast<float>(i)});
+        e.set<Velocity>({static_cast<float>(i), static_cast<float>(i)});
     }
  
-    // Destroy entity created in loop
-    world.entity(520).destruct();
+    printPos(qPos);
+ 
+    for (std::size_t frame = 0; frame < 60; ++frame) {
+        movementSystem(qMov, dt);
+    }
+    printPos(qPos);
 }
-```
-
-Only the player is processed because:
-
-```text
-player
- ├── Position
- └── Velocity
-       ↓
-     included
-
-
-enemy
- └── Position
-       ↓
-     excluded
 ```
 
 ## The Flecs API I'd learn first
