@@ -330,12 +330,10 @@ Here is the consolidated feature set for your procedurally generated, objective 
 
 * **The "Detective Triangle" Core**: Comparing Objective Physical Traces vs. Subjective Monk Memories vs. Subjective Monk Dialogue.
 * **Dialogue as Turn-Based RPG Combat**:
-* **Composure (HP)**: Mental stamina; reaching 0 triggers a complete story collapse/confession.
-* **Mental Armor Class (AC)**: Derived from traits like `Dogmatic`, `Secretive`, or `Social Stature`.
-* **Inquiry Types (Damage Types)**: Logic, Physical Evidence (Bludgeoning/Bypasses AC), Emotional Pressure (Forces Willpower Saves), Moral Appeal.
-* **Status Conditions**: `Shaken` (-2 AC), `Flustered` (prone to slip-ups), `Cornered` (high volatility/breakdown risk).
-
-
+    * **Composure (HP)**: Mental stamina; reaching 0 triggers a complete story collapse/confession.
+    * **Mental Armor Class (AC)**: Derived from traits like `Dogmatic`, `Secretive`, or `Social Stature`.
+    * **Inquiry Types (Damage Types)**: Logic, Physical Evidence (Bludgeoning/Bypasses AC), Emotional Pressure (Forces Willpower Saves), Moral Appeal.
+    * **Status Conditions**: `Shaken` (-2 AC), `Flustered` (prone to slip-ups), `Cornered` (high volatility/breakdown risk).
 * **Gradual Multi-Turn Resolve Breakdown**: Chipping away at Composure shifts monk responses naturally through thresholds (100–75%: Stony Silence $\rightarrow$ 74–50%: Deflection $\rightarrow$ 49–25%: Shaken Contradictions $\rightarrow$ 24–0%: Breakdown/Disclosure) rather than sudden instant surrender.
 
 ---

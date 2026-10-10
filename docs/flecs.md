@@ -303,22 +303,43 @@ world.remove_all<TagSelected>()
 
 This is one of the most important parts of Flecs.
 
-You can create a query that finds all entities with a particular component:
+You can create a query that finds all entities with a particular component. However, we must differenciate between a one time query versus recurrent/every frame queries.
+
+### One time query
+
+For a one time ocurrence, we can create a quick query.
 
 ```cpp
 auto query = world.query<Position>();
 ```
 
-This means:
+### Every frame query
+
+We create and cache the query before hand. We can then use it whenever we need it. This is cheap and efficient.
+
+```cpp
+auto query = world.query_builder<Position>().cached().build();
+```
+
+Both queries mean:
 
 > Give me entities that have a `Position` component.
 
 You can then process the query:
 
 ```cpp
-query.each([](flecs::entity entity, Position& position)
+query.each([](Position& position)
 {
     position.x += 1.0f;
+    position.y += 1.0f;
+});
+```
+or
+
+```cpp
+query.each([](flecs::entity e, Position& pos)
+{
+    std::println("Entity {}: {}, {}", e.id(), pos.x, pos.y);
 });
 ```
 
@@ -341,7 +362,7 @@ Then:
 ### `query.each`
 
 ```cpp
-query.each([](flecs::entity entity, Position& pos, Velocity& vel)
+query.each([](const Position& pos, const Velocity& vel)
 {
     pos.x += vel.x;
     pos.y += vel.y;
@@ -367,17 +388,22 @@ Enemy
 This is essentially an ECS system:
 
 ```cpp
-void movementSystem(flecs::world& world, float dt)
+void movementSystem(const flecs::query<Position, Velocity>& query, float dt)
 {
-    auto query = world.query<Position, Velocity>();
 
-    query.each([dt](flecs::entity entity, Position& pos, Velocity& vel)
+    query.each([dt](Position& pos, Velocity& vel)
     {
         pos.x += vel.x * dt;
         pos.y += vel.y * dt;
     });
 }
+
+int main() {
+    flecs::world world;
+    auto query = world.query_builder<Position, Velocity>().cached().build();
+}
 ```
+
 ### `query.find`
 
 `query.find` uses the same query to search for the first entity that satisfies a condition, but **it stops interation when a condition is met**:
@@ -644,7 +670,7 @@ int main()
     enemy.set<Position>({100.0f, 50.0f});
 
     // Query entities with Position + Velocity
-    auto query = world.query<Position, Velocity>();
+    auto query = world.query_builder<Position, Velocity>().cached().build();
 
     // Process result of query
     query.each([](flecs::entity entity, Position& pos, Velocity& vel)
