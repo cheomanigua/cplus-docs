@@ -459,58 +459,60 @@ This is useful in you load a new level, for instance.
 Putting the important pieces together:
 
 ```cpp
-#include <entt/entt.hpp>
-#include <iostream>
+#include <cstddef>
+#include <print>
 
-struct Position
-{
-    float x{};
-    float y{};
+#include "entt.hpp"
+
+struct Position {
+    float x{}, y{};
 };
 
-struct Velocity
-{
-    float x{};
-    float y{};
+struct Velocity {
+    float x{}, y{};
 };
 
-int main()
+void movementSystem(entt::view<entt::get_t<Position, Velocity>>& v, float dt)
 {
-    entt::registry registry;
-
-    // Create entities
-    auto player = registry.create();
-    auto enemy  = registry.create();
-
-    // Add components
-    registry.emplace<Position>(player, 0.0f, 0.0f);
-    registry.emplace<Velocity>(player, 5.0f, 2.0f);
-
-    registry.emplace<Position>(enemy, 100.0f, 50.0f);
-
-    // Query entities with Position + Velocity
-    auto view = registry.view<Position, Velocity>();
-
-    // Process result of query
-    for (auto [entity, pos, vel] : view.each())
-    {
-        pos.x += vel.x;
-        pos.y += vel.y;
-
-        std::cout << "Entity "
-                    << entt::to_entity(entity) << ": "
-                    << pos.x << ", "
-                    << pos.y << "\n";
+    for(auto [entity, pos, vel] : v.each()) {
+        pos.x += vel.x * dt;
+        pos.y += vel.y * dt;
     }
+}
 
-    // Create entities and add components in loop
+void printPos(entt::view<entt::get_t<Position>>& v)
+{
+    for(auto [entity, pos] : v.each()) {
+        std::println("Entity {}: {}, {}", entt::to_integral(entity), pos.x, pos.y);
+    }
+    std::println();
+}
+
+int main() {
+    entt::registry reg{};
+    constexpr float dt {1.0f / 60.0f};
+    auto posV = reg.view<Position>();
+    auto movV = reg.view<Position, Velocity>();
+
     for(std::size_t i = 0; i < 5; ++i) {
-        auto entity = registry.create();
-        registry.emplace<Position>(entity, static_cast<float>(i), static_cast<float>(i));
+        auto entity = reg.create();
+        float value = static_cast<float>(i);
+        reg.emplace<Position>(entity, value, value);
+        reg.emplace<Velocity>(entity, value, value);
     }
- 
-    // Destroy entity created in loop
-    registry.destroy(static_cast<entt::entity>(1));
+    printPos(posV);
+
+    for(std::size_t frame = 0; frame < 60; ++frame) {
+        movementSystem(movV, dt);
+    }
+    printPos(posV);
+
+    reg.destroy(static_cast<entt::entity>(3));
+    printPos(posV);
+
+    auto entity = reg.create();
+    reg.emplace<Position>(entity, 5.0f, 5.0f);
+    printPos(posV);
 }
 ```
 
