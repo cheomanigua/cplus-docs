@@ -149,10 +149,6 @@ Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do
 - Texture and text caches do not implement automatic eviction.
 - The library uses a single global context and renderer.
 
-## License
-
-Specify your project's license here before distributing the library.
-
 ## Example
 
 ```cpp
@@ -169,11 +165,8 @@ int main()
 
     SDL_Texture* texture = wp::loadTexture("raybunny.png");
     wp::Sprite player{{100.f, 100.f}, texture};
-    wp::Sprite orc{{150.f, 150.f}, texture};
-    wp::Rectangle wall{{250.f, 150.f}, {100.f, 40.f}};
+    wp::Rectangle wall1{{250.f, 150.f}, {100.f, 40.f}};
     wp::Rectangle wall2{{450.f, 250.f}, {150.f, 80.f}};
-
-    SDL_Color RED{230, 41, 55, 255};
 
     while (wp::IsRunning())
     {
@@ -197,12 +190,11 @@ int main()
         player.position.y += direction.y * speed * dt;
 
         // Check collision easily using overloaded wp::CheckCollision
-        bool collided = wp::CheckCollision(player, wall);
+        bool collided = wp::CheckCollision(player, wall1);
 
-        // Draw elements (switch color if colliding)
-        wp::draw(wall, RED);
-        wp::draw(wall2, RED);
-        wp::draw(orc);
+        // Draw elements
+        wp::draw(wall1, (collided ? wp::Red : wp::White));
+        wp::draw(wall2);
         wp::draw(player);
 
         wp::drawText("Move the square with the cursor keys.", 10.0f, 10.0f);
