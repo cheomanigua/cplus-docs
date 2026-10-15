@@ -22,6 +22,18 @@ All functions and types are defined in the `wp` namespace.
 
 ## API Reference
 
+### Colors
+
+Predefined `SDL_Color` constants for quick styling.
+
+| **Constant** | **RGBA Values** | 
+|-|-| 
+| `wp::Blue` | `{0, 121, 241, 255}` | 
+| `wp::Red` | `{230, 41, 55, 255}` | 
+| `wp::White` | `{255, 255, 255, 255}` | 
+| `wp::Black` | `{0, 0, 0, 255}` | 
+| `wp::Gray` | `{80, 80, 80, 255}` | 
+
 ### Initialization and Lifecycle
 
 | Function | Description | Example |
@@ -41,7 +53,7 @@ The font path and font size are optional. `Init()` defaults to no font and a fon
 | `Input` | Current arrow-key states: `left`, `right`, `up`, `down`. | `wp::Input input = wp::GetInput();` |
 | `Circle` | Circle defined by center position and radius. | `wp::Circle ball{{100.0f, 100.0f}, 20.0f};` |
 | `Rectangle` | Rectangle defined by top-left position and size. | `wp::Rectangle wall{{100.0f, 100.0f}, {50.0f, 30.0f}};` |
-| `Sprite` | Textured image defined by position and `SDL_Texture*`. | `wp::Sprite bunny{{100.0f, 100.0f}, wp::load("bunny.png")};` |
+| `Sprite` | Textured image defined by position and `SDL_Texture*`. | `wp::Sprite bunny{{100.0f, 100.0f}, texture};` |
 
 `Rectangle::GetBounds()` returns its `SDL_FRect` bounds.
 
@@ -63,10 +75,10 @@ player.position.x += 200.0f * wp::GetDeltaTime();
 
 | Function | Description | Example |
 |---|---|---|
-| `draw(Circle, color)` | Draws a circle outline. Default color is blue. | `wp::draw(ball, {0, 121, 241, 255});` |
-| `draw(Rectangle, color)` | Draws a rectangle outline. Default color is red. | `wp::draw(wall, {230, 41, 55, 255});` |
+| `draw(Circle, color)` | Draws a circle outline. | `wp::draw(ball, {0, 121, 241, 255});` |
+| `draw(Rectangle, color)` | Draws a rectangle outline. | `wp::draw(wall, {230, 41, 55, 255});` |
 | `draw(Sprite)` | Draws a sprite at its position using its texture dimensions. | `wp::draw(bunny);` |
-| `drawText(text, x, y, color)` | Draws text at the specified top-left position. Default color is dark gray. | `wp::drawText("Score: 100", 10.0f, 10.0f);` |
+| `drawText(text, x, y, color)` | Draws text at the specified top-left position. | `wp::drawText("Score: 100", 10.0f, 10.0f);` |
 
 Colors use `SDL_Color` with RGBA components in the range 0–255.
 
@@ -76,11 +88,11 @@ Text rendering requires a successfully loaded font.
 
 | Function | Description | Example |
 |---|---|---|
-| `load(path)` | Loads a texture on first use and returns the cached texture on subsequent requests for the same path. | `SDL_Texture* texture = wp::load("bunny.png");` |
+| `loadTexture(path)` | Loads a texture on first use and returns the cached texture on subsequent requests for the same path. | `SDL_Texture* texture = wp::loadTexture("bunny.png");` |
 | `TextureCache::Get(path)` | Retrieves a cached texture or loads it if it is not cached. | `auto* texture = wp::ctx.textureCache->Get("bunny.png");` |
 | `TextureCache::Clear()` | Destroys all cached textures and removes their entries. | `wp::ctx.textureCache->Clear();` |
 
-**Ownership:** The texture cache owns textures returned by `wp::load()`. Do not call `SDL_DestroyTexture()` on those textures individually. The cache destroys them during cleanup.
+**Ownership:** The texture cache owns textures returned by `wp::loadTexture()`. Do not call `SDL_DestroyTexture()` on those textures individually. The cache destroys them during cleanup.
 
 Use consistent file paths to reuse cached textures.
 
@@ -124,7 +136,7 @@ Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do
 ## Resource Management
 
 - Call `wp::Init()` before loading textures or rendering.
-- Use `wp::load()` for cached textures.
+- Use `wp::loadTexture()` for cached textures.
 - Do not destroy cached textures manually.
 - The global context cleans up its caches, font, renderer, window, and SDL subsystems during normal program shutdown.
 - Do not use cached texture pointers after their cache has been cleared or destroyed.
@@ -155,7 +167,7 @@ int main()
 
     constexpr float speed {200.0f};
 
-    SDL_Texture* texture = wp::load("raybunny.png");
+    SDL_Texture* texture = wp::loadTexture("raybunny.png");
     wp::Sprite player{{100.f, 100.f}, texture};
     wp::Sprite orc{{150.f, 150.f}, texture};
     wp::Rectangle wall{{250.f, 150.f}, {100.f, 40.f}};

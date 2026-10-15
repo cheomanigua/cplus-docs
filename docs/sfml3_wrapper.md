@@ -9,7 +9,7 @@ A lightweight, header-only C++ library built on SFML 3 for creating simple 2D ga
 
 ## Installation
 
-- Download [wrapper.h](https://raw.githubusercontent.com/cheomanigua/cplus/refs/heads/main/sfml/wrapper/wrapper.h);
+- Download [wrapper.h](https://raw.githubusercontent.com/cheomanigua/cplus/refs/heads/main/sfml3/wrapper/wrapper.h)
 - Copy `wrapper.h` into your project and include it:
 
 ```cpp
@@ -23,7 +23,6 @@ All functions, types, and constants are defined in the `wp` namespace.
 ### Colors
 
 Predefined `sf::Color` constants for quick styling.
-
 
 | **Constant** | **RGBA Values** | 
 |-|-| 
@@ -56,8 +55,8 @@ Pass your `sf::RenderTarget` (like an `sf::RenderWindow`) as the first argument 
 
 | **Function** | **Description** | **Example** | 
 |-|-|-|  
-| `draw(window, circle, color)` | Draws an outlined circle. Default color is `wp::Blue`. | `wp::draw(window, ball, wp::Red);` | 
-| `draw(window, rectangle, color)` | Draws an outlined rectangle. Default color is `wp::Red`. | `wp::draw(window, wall, wp::Blue);` | 
+| `draw(window, circle, color)` | Draws an outlined circle. | `wp::draw(window, ball, wp::Red);` | 
+| `draw(window, rectangle, color)` | Draws an outlined rectangle. | `wp::draw(window, wall, wp::Blue);` | 
 | `draw(window, sprite)` | Draws a sprite at its position. | `wp::draw(window, bunny);` | 
 | `drawCircle(window, pos, radius, color)` | Immediate-style primitive circle draw. | `wp::drawCircle(window, {100.f, 100.f}, 15.f);` | 
 | `drawRect(window, pos, size, color)` | Immediate-style primitive rectangle draw. | `wp::drawRect(window, {50.f, 50.f}, {40.f, 40.f});` | 
@@ -97,6 +96,7 @@ int main()
     window.setFramerateLimit(60);
     sf::Clock clock;
 
+    constexpr float speed {200.0f};
     sf::Font font("/usr/share/fonts/xscreensaver/clacon.ttf");
     sf::Text coll(font);
     coll.setPosition({0.0f, 20.0f});
@@ -115,16 +115,24 @@ int main()
                 window.close();
         }
 
+        wp::Input input = wp::GetInput();
+
+        sf::Vector2f direction{
+            static_cast<float>(input.right - input.left),
+            static_cast<float>(input.down - input.up)
+        };
+
         const float dt = clock.restart().asSeconds();
 
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right))
-            player.position.x += 200.f * dt;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left))
-            player.position.x -= 200.f * dt;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down))
-            player.position.y += 200.f * dt;
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up))
-            player.position.y -= 200.f * dt;
+        // Normalize diagonal movement if moving horizontally & vertically
+        if (direction.x != 0.0f && direction.y != 0.0f)
+        {
+            direction.x *= 0.70710678f;
+            direction.y *= 0.70710678f;
+        }
+
+        player.position.x += direction.x * speed * dt;
+        player.position.y += direction.y * speed * dt;
 
         bool isColliding = wp::CheckCollision(player.GetBounds(), wall.GetBounds());
         coll.setString(isColliding ? "Collided: YES" : "Collided: NO");
