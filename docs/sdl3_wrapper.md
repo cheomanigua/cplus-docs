@@ -11,10 +11,10 @@ A lightweight, header-only C++ library built on SDL3, SDL3_ttf, and SDL3_image f
 
 ## Installation
 
-Copy `my_library.h` into your project and include it:
+Copy `ss.h` into your project and include it:
 
 ```cpp
-#include "my_library.h"
+#include "ss.h"
 ```
 
 All functions and types are defined in the `ss` namespace.
@@ -108,12 +108,8 @@ All collision functions return `true` when a collision is detected and `false` o
 | `CheckCollision(Circle, Circle)` | Circle vs. circle. | `ss::CheckCollision(ball, enemy);` |
 | `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `ss::CheckCollision(wall, otherWall);` |
 | `CheckCollision(Circle, Rectangle)` | Circle vs. rectangle. | `ss::CheckCollision(ball, wall);` |
-
-Sprite collisions can be checked using their bounds:
-
-```cpp
-ss::CheckCollision(bunny.GetBounds(), wall.GetBounds());
-```
+| `CheckCollision(Sprite, Rectangle)` | Sprite vs. rectangle. | `ss::CheckCollision(bunny, wall);` |
+| `CheckCollision(Sprite, Sprite)` | Sprite vs. sprite. | `ss::CheckCollision(bunny, bunny2);` |
 
 Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do not count. Point-to-rectangle collision includes the left and top edges but excludes the right and bottom edges.
 
@@ -143,3 +139,63 @@ Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do
 ## License
 
 Specify your project's license here before distributing the library.
+
+## Example
+
+```cpp
+#include "ss.h"
+
+int main()
+{
+    if (!ss::Init("Collision Demo", 800, 450, "/usr/share/fonts/xscreensaver/clacon.ttf"))
+    {
+        return 1;
+    }
+
+    constexpr float speed {200.0f};
+
+    SDL_Texture* texture = ss::load("raybunny.png");
+    ss::Sprite player{{100.f, 100.f}, texture};
+    ss::Rectangle wall{{250.f, 150.f}, {100.f, 40.f}};
+    ss::Rectangle wall2{{450.f, 250.f}, {150.f, 80.f}};
+
+    SDL_Color RED{230, 41, 55, 255};
+
+    while (ss::IsRunning())
+    {
+        ss::BeginFrame({0, 0, 0, 255});
+        const float dt = ss::GetDeltaTime();
+        ss::Input input = ss::GetInput();
+
+        SDL_FPoint direction{
+            static_cast<float>(input.right - input.left),
+            static_cast<float>(input.down - input.up)
+        };
+
+        // Normalize diagonal movement if moving horizontally & vertically
+        if (direction.x != 0.0f && direction.y != 0.0f)
+        {
+            direction.x *= 0.70710678f;
+            direction.y *= 0.70710678f;
+        }
+
+        player.position.x += direction.x * speed * dt;
+        player.position.y += direction.y * speed * dt;
+
+        // Check collision easily using overloaded ss::CheckCollision
+        bool collided = ss::CheckCollision(player, wall);
+
+        // Draw elements (switch color if colliding)
+        ss::draw(wall, RED);
+        ss::draw(wall2, RED);
+        ss::draw(player);
+
+        ss::drawText("Move the square with the cursor keys.", 10.0f, 10.0f);
+        ss::drawText(collided ? "Collision: YES" : "Collision: NO", 10.0f, 25.0f);
+
+        ss::EndFrame();
+    }
+
+    return 0;
+}
+```
