@@ -11,13 +11,14 @@ A lightweight, header-only C++ library built on SDL3, SDL3_ttf, and SDL3_image f
 
 ## Installation
 
-Copy `ss.h` into your project and include it:
+- Download [wrapper.h](https://raw.githubusercontent.com/cheomanigua/cplus/refs/heads/main/sdl3/wrapper/wrapper.h)
+- Copy `wrapper.h` into your project and include it:
 
 ```cpp
-#include "ss.h"
+#include "wrapper.h"
 ```
 
-All functions and types are defined in the `ss` namespace.
+All functions and types are defined in the `wp` namespace.
 
 ## API Reference
 
@@ -25,11 +26,11 @@ All functions and types are defined in the `ss` namespace.
 
 | Function | Description | Example |
 |---|---|---|
-| `Init(title, width, height, fontPath, fontSize)` | Initializes SDL, the window, renderer, caches, and optional font. Returns `bool`. | `ss::Init("My Game", 800, 450, "font.ttf", 20.0f);` |
-| `IsRunning()` | Processes events and indicates whether the application should continue running. Escape and window close stop the loop. | `while (ss::IsRunning()) { /* game loop */ }` |
-| `BeginFrame(clearColor)` | Calculates delta time, clears the renderer, and sets the background color. | `ss::BeginFrame({0, 0, 0, 255});` |
-| `EndFrame()` | Presents the frame and delays when necessary to target approximately 60 FPS. | `ss::EndFrame();` |
-| `GetDeltaTime()` | Returns the frame delta time in seconds, capped at 0.1 seconds. | `float dt = ss::GetDeltaTime();` |
+| `Init(title, width, height, fontPath, fontSize)` | Initializes SDL, the window, renderer, caches, and optional font. Returns `bool`. | `wp::Init("My Game", 800, 450, "font.ttf", 20.0f);` |
+| `IsRunning()` | Processes events and indicates whether the application should continue running. Escape and window close stop the loop. | `while (wp::IsRunning()) { /* game loop */ }` |
+| `BeginFrame(clearColor)` | Calculates delta time, clears the renderer, and sets the background color. | `wp::BeginFrame({0, 0, 0, 255});` |
+| `EndFrame()` | Presents the frame and delays when necessary to target approximately 60 FPS. | `wp::EndFrame();` |
+| `GetDeltaTime()` | Returns the frame delta time in seconds, capped at 0.1 seconds. | `float dt = wp::GetDeltaTime();` |
 
 The font path and font size are optional. `Init()` defaults to no font and a font size of `20.0f`.
 
@@ -37,10 +38,10 @@ The font path and font size are optional. `Init()` defaults to no font and a fon
 
 | Type | Description | Example |
 |---|---|---|
-| `Input` | Current arrow-key states: `left`, `right`, `up`, `down`. | `ss::Input input = ss::GetInput();` |
-| `Circle` | Circle defined by center position and radius. | `ss::Circle ball{{100.0f, 100.0f}, 20.0f};` |
-| `Rectangle` | Rectangle defined by top-left position and size. | `ss::Rectangle wall{{100.0f, 100.0f}, {50.0f, 30.0f}};` |
-| `Sprite` | Textured image defined by position and `SDL_Texture*`. | `ss::Sprite bunny{{100.0f, 100.0f}, ss::load("bunny.png")};` |
+| `Input` | Current arrow-key states: `left`, `right`, `up`, `down`. | `wp::Input input = wp::GetInput();` |
+| `Circle` | Circle defined by center position and radius. | `wp::Circle ball{{100.0f, 100.0f}, 20.0f};` |
+| `Rectangle` | Rectangle defined by top-left position and size. | `wp::Rectangle wall{{100.0f, 100.0f}, {50.0f, 30.0f}};` |
+| `Sprite` | Textured image defined by position and `SDL_Texture*`. | `wp::Sprite bunny{{100.0f, 100.0f}, wp::load("bunny.png")};` |
 
 `Rectangle::GetBounds()` returns its `SDL_FRect` bounds.
 
@@ -50,22 +51,22 @@ The font path and font size are optional. `Init()` defaults to no font and a fon
 
 | Function | Description | Example |
 |---|---|---|
-| `GetInput()` | Reads the current state of the four arrow keys. | `ss::Input input = ss::GetInput();` |
+| `GetInput()` | Reads the current state of the four arrow keys. | `wp::Input input = wp::GetInput();` |
 
 Movement can be scaled by delta time:
 
 ```cpp
-player.position.x += 200.0f * ss::GetDeltaTime();
+player.position.x += 200.0f * wp::GetDeltaTime();
 ```
 
 ### Rendering
 
 | Function | Description | Example |
 |---|---|---|
-| `draw(Circle, color)` | Draws a circle outline. Default color is blue. | `ss::draw(ball, {0, 121, 241, 255});` |
-| `draw(Rectangle, color)` | Draws a rectangle outline. Default color is red. | `ss::draw(wall, {230, 41, 55, 255});` |
-| `draw(Sprite)` | Draws a sprite at its position using its texture dimensions. | `ss::draw(bunny);` |
-| `drawText(text, x, y, color)` | Draws text at the specified top-left position. Default color is dark gray. | `ss::drawText("Score: 100", 10.0f, 10.0f);` |
+| `draw(Circle, color)` | Draws a circle outline. Default color is blue. | `wp::draw(ball, {0, 121, 241, 255});` |
+| `draw(Rectangle, color)` | Draws a rectangle outline. Default color is red. | `wp::draw(wall, {230, 41, 55, 255});` |
+| `draw(Sprite)` | Draws a sprite at its position using its texture dimensions. | `wp::draw(bunny);` |
+| `drawText(text, x, y, color)` | Draws text at the specified top-left position. Default color is dark gray. | `wp::drawText("Score: 100", 10.0f, 10.0f);` |
 
 Colors use `SDL_Color` with RGBA components in the range 0–255.
 
@@ -75,11 +76,11 @@ Text rendering requires a successfully loaded font.
 
 | Function | Description | Example |
 |---|---|---|
-| `load(path)` | Loads a texture on first use and returns the cached texture on subsequent requests for the same path. | `SDL_Texture* texture = ss::load("bunny.png");` |
-| `TextureCache::Get(path)` | Retrieves a cached texture or loads it if it is not cached. | `auto* texture = ss::ctx.textureCache->Get("bunny.png");` |
-| `TextureCache::Clear()` | Destroys all cached textures and removes their entries. | `ss::ctx.textureCache->Clear();` |
+| `load(path)` | Loads a texture on first use and returns the cached texture on subsequent requests for the same path. | `SDL_Texture* texture = wp::load("bunny.png");` |
+| `TextureCache::Get(path)` | Retrieves a cached texture or loads it if it is not cached. | `auto* texture = wp::ctx.textureCache->Get("bunny.png");` |
+| `TextureCache::Clear()` | Destroys all cached textures and removes their entries. | `wp::ctx.textureCache->Clear();` |
 
-**Ownership:** The texture cache owns textures returned by `ss::load()`. Do not call `SDL_DestroyTexture()` on those textures individually. The cache destroys them during cleanup.
+**Ownership:** The texture cache owns textures returned by `wp::load()`. Do not call `SDL_DestroyTexture()` on those textures individually. The cache destroys them during cleanup.
 
 Use consistent file paths to reuse cached textures.
 
@@ -89,8 +90,8 @@ Text caching is managed internally by `TextCache` and accessed through `drawText
 
 | Function | Description | Example |
 |---|---|---|
-| `drawText(text, x, y, color)` | Renders text and caches its texture by text content and RGBA color. | `ss::drawText("Game Over", 300.0f, 200.0f);` |
-| `TextCache::Clear()` | Destroys all cached text textures. | `ss::ctx.textCache->Clear();` |
+| `drawText(text, x, y, color)` | Renders text and caches its texture by text content and RGBA color. | `wp::drawText("Game Over", 300.0f, 200.0f);` |
+| `TextCache::Clear()` | Destroys all cached text textures. | `wp::ctx.textCache->Clear();` |
 
 Repeated requests with the same text and color reuse the cached texture. Different text or colors create separate entries.
 
@@ -100,16 +101,16 @@ All collision functions return `true` when a collision is detected and `false` o
 
 | Overload | Description | Example |
 |---|---|---|
-| `CheckCollision(point, circleCenter, radius)` | Point vs. circle. | `ss::CheckCollision(point, ball.position, ball.radius);` |
-| `CheckCollision(point, SDL_FRect)` | Point vs. rectangle. | `ss::CheckCollision(point, wall.GetBounds());` |
-| `CheckCollision(centerA, radiusA, centerB, radiusB)` | Circle vs. circle using positions and radii. | `ss::CheckCollision(ball.position, ball.radius, enemy.position, enemy.radius);` |
-| `CheckCollision(SDL_FRect, SDL_FRect)` | Rectangle vs. rectangle. | `ss::CheckCollision(wall.GetBounds(), otherWall.GetBounds());` |
-| `CheckCollision(center, radius, SDL_FRect)` | Circle vs. rectangle. | `ss::CheckCollision(ball.position, ball.radius, wall.GetBounds());` |
-| `CheckCollision(Circle, Circle)` | Circle vs. circle. | `ss::CheckCollision(ball, enemy);` |
-| `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `ss::CheckCollision(wall, otherWall);` |
-| `CheckCollision(Circle, Rectangle)` | Circle vs. rectangle. | `ss::CheckCollision(ball, wall);` |
-| `CheckCollision(Sprite, Rectangle)` | Sprite vs. rectangle. | `ss::CheckCollision(bunny, wall);` |
-| `CheckCollision(Sprite, Sprite)` | Sprite vs. sprite. | `ss::CheckCollision(bunny, bunny2);` |
+| `CheckCollision(point, circleCenter, radius)` | Point vs. circle. | `wp::CheckCollision(point, ball.position, ball.radius);` |
+| `CheckCollision(point, SDL_FRect)` | Point vs. rectangle. | `wp::CheckCollision(point, wall.GetBounds());` |
+| `CheckCollision(centerA, radiusA, centerB, radiusB)` | Circle vs. circle using positions and radii. | `wp::CheckCollision(ball.position, ball.radius, enemy.position, enemy.radius);` |
+| `CheckCollision(SDL_FRect, SDL_FRect)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall.GetBounds(), otherWall.GetBounds());` |
+| `CheckCollision(center, radius, SDL_FRect)` | Circle vs. rectangle. | `wp::CheckCollision(ball.position, ball.radius, wall.GetBounds());` |
+| `CheckCollision(Circle, Circle)` | Circle vs. circle. | `wp::CheckCollision(ball, enemy);` |
+| `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall, otherWall);` |
+| `CheckCollision(Circle, Rectangle)` | Circle vs. rectangle. | `wp::CheckCollision(ball, wall);` |
+| `CheckCollision(Sprite, Rectangle)` | Sprite vs. rectangle. | `wp::CheckCollision(bunny, wall);` |
+| `CheckCollision(Sprite, Sprite)` | Sprite vs. sprite. | `wp::CheckCollision(bunny, bunny2);` |
 
 Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do not count. Point-to-rectangle collision includes the left and top edges but excludes the right and bottom edges.
 
@@ -117,13 +118,13 @@ Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do
 
 | Feature | Description | Example |
 |---|---|---|
-| Delta time | Elapsed frame time in seconds, capped at 0.1 seconds. | `position.x += speed * ss::GetDeltaTime();` |
-| Frame pacing | Targets approximately 60 FPS. | `ss::EndFrame();` |
+| Delta time | Elapsed frame time in seconds, capped at 0.1 seconds. | `position.x += speed * wp::GetDeltaTime();` |
+| Frame pacing | Targets approximately 60 FPS. | `wp::EndFrame();` |
 
 ## Resource Management
 
-- Call `ss::Init()` before loading textures or rendering.
-- Use `ss::load()` for cached textures.
+- Call `wp::Init()` before loading textures or rendering.
+- Use `wp::load()` for cached textures.
 - Do not destroy cached textures manually.
 - The global context cleans up its caches, font, renderer, window, and SDL subsystems during normal program shutdown.
 - Do not use cached texture pointers after their cache has been cleared or destroyed.
@@ -143,29 +144,30 @@ Specify your project's license here before distributing the library.
 ## Example
 
 ```cpp
-#include "ss.h"
+#include "wrapper.h"
 
 int main()
 {
-    if (!ss::Init("Collision Demo", 800, 450, "/usr/share/fonts/xscreensaver/clacon.ttf"))
+    if (!wp::Init("Collision Demo", 800, 450, "/usr/share/fonts/xscreensaver/clacon.ttf"))
     {
         return 1;
     }
 
     constexpr float speed {200.0f};
 
-    SDL_Texture* texture = ss::load("raybunny.png");
-    ss::Sprite player{{100.f, 100.f}, texture};
-    ss::Rectangle wall{{250.f, 150.f}, {100.f, 40.f}};
-    ss::Rectangle wall2{{450.f, 250.f}, {150.f, 80.f}};
+    SDL_Texture* texture = wp::load("raybunny.png");
+    wp::Sprite player{{100.f, 100.f}, texture};
+    wp::Sprite orc{{150.f, 150.f}, texture};
+    wp::Rectangle wall{{250.f, 150.f}, {100.f, 40.f}};
+    wp::Rectangle wall2{{450.f, 250.f}, {150.f, 80.f}};
 
     SDL_Color RED{230, 41, 55, 255};
 
-    while (ss::IsRunning())
+    while (wp::IsRunning())
     {
-        ss::BeginFrame({0, 0, 0, 255});
-        const float dt = ss::GetDeltaTime();
-        ss::Input input = ss::GetInput();
+        wp::BeginFrame({0, 0, 0, 255});
+        const float dt = wp::GetDeltaTime();
+        wp::Input input = wp::GetInput();
 
         SDL_FPoint direction{
             static_cast<float>(input.right - input.left),
@@ -182,18 +184,19 @@ int main()
         player.position.x += direction.x * speed * dt;
         player.position.y += direction.y * speed * dt;
 
-        // Check collision easily using overloaded ss::CheckCollision
-        bool collided = ss::CheckCollision(player, wall);
+        // Check collision easily using overloaded wp::CheckCollision
+        bool collided = wp::CheckCollision(player, wall);
 
         // Draw elements (switch color if colliding)
-        ss::draw(wall, RED);
-        ss::draw(wall2, RED);
-        ss::draw(player);
+        wp::draw(wall, RED);
+        wp::draw(wall2, RED);
+        wp::draw(orc);
+        wp::draw(player);
 
-        ss::drawText("Move the square with the cursor keys.", 10.0f, 10.0f);
-        ss::drawText(collided ? "Collision: YES" : "Collision: NO", 10.0f, 25.0f);
+        wp::drawText("Move the square with the cursor keys.", 10.0f, 10.0f);
+        wp::drawText(collided ? "Collision: YES" : "Collision: NO", 10.0f, 25.0f);
 
-        ss::EndFrame();
+        wp::EndFrame();
     }
 
     return 0;
