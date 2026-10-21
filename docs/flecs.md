@@ -122,9 +122,9 @@ auto entity = world.entity();
 
 [!NOTE]
 <strong>IMPORTANT</strong>
-<code>auto entity</code> is a handler, not an entity. We just created an entity and stored it in a handler. This is useful for adding components later.
+<code>auto entity</code> is a handle, not an entity. We just created an entity and stored it in a handle. This is useful for adding components later.
 
-You can create different entities using the same handler:
+You can create different entities using the same handle:
 
 ```cpp
 auto enemy = world.entity();
@@ -132,7 +132,7 @@ enemy = world.entity();
 enemy = world.entity();
 ```
 
-You can create different entities using different handlers:
+You can create different entities using different handles:
 
 ```cpp
 auto player = world.entity();
@@ -140,15 +140,15 @@ auto enemy  = world.entity();
 auto bullet = world.entity();
 ```
 
-You can create an entity without a handler by adding a name:
+You can create an entity without a handle by adding a name:
 
 ```cpp
 world.entity("Player");
 ```
 
-... and then later add a handler to add components or whatever:
+... and then later add a handle to add components or whatever:
 
-```
+```cpp
 auto player = world.lookup("Player");
 ```
 
@@ -197,6 +197,8 @@ Use `set` to add or update a component:
 
 ```cpp
 player.set<Position>({10.0f, 20.0f});
+or
+player.set(Position{10.0f, 20.0f});
 ```
 
 Now:
@@ -222,7 +224,7 @@ player
   └── Velocity
 ```
 
-You can add components to different handlers:
+You can add components to different handles:
 
 ```cpp
 enemy.set<Position>({50.0f, 100.0f});
@@ -246,7 +248,7 @@ bullet
 
 That's the core ECS idea.
 
-### There are 3 ways to create an entity and add components
+### There are 2 ways to create an entity and add components
 
 ```cpp
 flecs::world world;
@@ -257,14 +259,15 @@ player.set<Position>({50.0f, 100.0f});
 player.set<Velocity>({10.0f, 10.0f});
 
 // Option 2
-auto player = world.entity()
-    .set(Position{10, 20})
-    .set(Velocity{10, 20});
-
-// Option 3
 world.entity("Player")
     .set<Position>({100.0f, 100.0f})
     .set<Velocity>({0.0f, 0.0f});
+```
+
+With Option 2, you can later on create a handle to access:
+
+```cpp
+auto player = world.lookup("Player");
 ```
 
 ## 7. Get a component
@@ -688,14 +691,6 @@ struct Velocity {
     float x{}, y{};
 };
 
-void movementSystem(flecs::query<Position, Velocity>& q, float dt)
-{
-    q.each([dt](Position& pos, Velocity& vel) {
-        pos.x += vel.x * dt;
-        pos.y += vel.y * dt;
-    });
-}
-
 void printPos(flecs::query<const Position>& q)
 {
     q.each([](flecs::entity e, const Position& pos) {
@@ -708,7 +703,14 @@ int main() {
     flecs::world world{};
     constexpr float dt {1.0f / 60.0f};
     auto posQ = world.query<const Position>();
-    auto movQ = world.query_builder<Position, Velocity>().cached().build();
+
+	// Create a system. Flecs manages its query and execution
+	world.system<Position, const Velocity>("Movement")
+        .each([](flecs::iter& it, std::size_t,
+                 Position& pos, const Velocity& vel) {
+            pos.x += vel.x * it.delta_time();
+            pos.y += vel.y * it.delta_time();
+        });
 
     for(std::size_t i = 0; i < 5; ++i) {
         auto e = world.entity();
@@ -719,7 +721,7 @@ int main() {
     printPos(posQ);
 
     for(std::size_t frame = 0; frame < 60; ++frame) {
-        movementSystem(movQ, dt);
+        world.progress(dt);
     }
     printPos(posQ);
 
