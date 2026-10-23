@@ -5,14 +5,12 @@
 ## 1. Download
 
 ```bash
-mkdir myproject
-cd myproject
-
 wget https://raw.githubusercontent.com/SanderMertens/flecs/master/distr/flecs.h
 wget https://raw.githubusercontent.com/SanderMertens/flecs/master/distr/flecs.c
+or
+curl -L -o flecs.h https://raw.githubusercontent.com/SanderMertens/flecs/master/distr/flecs.h
+curl -L -o flecs.c https://raw.githubusercontent.com/SanderMertens/flecs/master/distr/flecs.c
 ```
-
-> For a reproducible project, replace `master` with a specific Flecs release/tag.
 
 ## 2. Compile Flecs
 
@@ -364,8 +362,26 @@ then, in the game loop, we update all Flecs systems by adding this line:
 world.progress(deltaTime);
 ```
 
+## 12. Create a prefab
 
-## 12. Create a query
+```cpp
+struct Defense {
+    float value;
+};
+
+// Create a SpaceShip prefab with a Defense component.
+flecs::entity SpaceShip = world.prefab("SpaceShip")
+    .set(Defense{50});
+
+// Create two prefab instances
+flecs::entity inst_1 = world.entity().is_a(SpaceShip);
+flecs::entity inst_2 = world.entity().is_a(SpaceShip);
+
+// Get instantiated component
+const Defense& d = inst_1.get<Defense>();
+```
+
+## 13. Create a query
 
 This is one of the most important parts of Flecs.
 
@@ -411,7 +427,7 @@ query.each([](flecs::entity e, Position& pos)
 
 The query matches all entities that have `Position`.
 
-## 13. Query multiple components
+## 14. Query multiple components
 
 You can query more than one component:
 
@@ -508,7 +524,7 @@ query.find()
 <strong>TIP</strong>
 <code>query.each</code> is generally for <strong>processing all matching entities</strong>, while <code>query.find</code> is for <strong>finding one matching entity</strong>.
 
-## 14. Query without the entity
+## 15. Query without the entity
 
 Sometimes you don't need the entity ID.
 
@@ -555,7 +571,7 @@ query.each([](Position& position)
 });
 ```
 
-## 15. Tags / empty components
+## 16. Tags / empty components
 
 A component doesn't need to contain data.
 
@@ -605,7 +621,7 @@ means:
 
 You don't need a `bool selected` inside another component.
 
-## 16. Remove tags
+## 17. Remove tags
 
 Tags use the same `remove` API:
 
@@ -613,7 +629,7 @@ Tags use the same `remove` API:
 entity.remove<Selected>();
 ```
 
-## 17. Replace/update a component
+## 18. Replace/update a component
 
 In Flecs, `set` can be used to add or replace a component value:
 
@@ -643,7 +659,7 @@ auto* health = enemy.get_mut<Health>();
 health->value = 50;
 ```
 
-## 18. Check whether an entity is alive
+## 19. Check whether an entity is alive
 
 Use `is_alive()`:
 
@@ -656,7 +672,7 @@ if (entity.is_alive())
 
 This becomes useful when dealing with entities whose lifetime isn't guaranteed.
 
-## 19. Reset the registry
+## 20. Reset the registry
 
 Remove all entities and all components from the registry:
 
@@ -664,7 +680,7 @@ Remove all entities and all components from the registry:
 world.reset();
 ```
 
-## 20. Remove vs Reset vs Destruct
+## 21. Remove vs Reset vs Destruct
 
 | Code                               | Effect                                     |
 | ---------------------------------- | ------------------------------------------ |
@@ -743,16 +759,19 @@ If you're starting out, you don't need to learn the entire Flecs API. I'd focus 
 | `flecs::world`        | ECS container         |
 | `world.entity()`      | Create entity         |
 | `entity.destruct()`   | Destroy entity        |
-| `entity.set<T>()`     | Add/update component  |
-| `entity.get<T>()`     | Get component         |
-| `entity.get_mut<T>()` | Get mutable component |
-| `entity.remove<T>()`  | Remove component      |
-| `entity.has<T>()`     | Check component       |
+| `entity.is_alive()`   | Check entity validity |
+| `entity.id()`         | Get entity identifier |
+| `entity.set<T>()`     | Add component to entity  |
+| `entity.set<T>()`     | Update entity's component |
+| `entity.get<T>()`     | Get component from entity        |
+| `entity.get_mut<T>()` | Get mutable component from entity|
+| `entity.remove<T>()`  | Remove component from entity     |
+| `entity.has<T>()`     | Check component from entity      |
+| `world.system<T>()`   | Create system         |
+| `world.prefab()`      | Create prefab         |
 | `world.query<T>()`    | Create query          |
 | `query.each()`        | Iterate query results (all) |
 | `query.find()`        | Iterate query results (not all) |
-| `entity.is_alive()`   | Check entity validity |
-| `entity.id()`         | Get entity identifier |
 
 Once these make sense, **most of the basic Flecs ECS model becomes much easier to understand**.
 

@@ -5,7 +5,7 @@
 ```bash
 wget https://raw.githubusercontent.com/skypjack/entt/refs/heads/main/single_include/entt/entt.hpp
 or
-curl -L -o entt.hpp "https://raw.githubusercontent.com/skypjack/entt/refs/heads/main/single_include/entt/entt.hpp"
+curl -L -o entt.hpp https://raw.githubusercontent.com/skypjack/entt/refs/heads/main/single_include/entt/entt.hpp
 ```
 
 # API
