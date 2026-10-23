@@ -30,6 +30,15 @@ Run these commands every time you edit `main.cpp`:
 g++ -std=c++17 -c main.cpp -o main.o
 g++ main.o flecs.o -lrt -lpthread -lm -o myapp
 ```
+If you are also using **Raylib** or **SDL3**:
+
+```bash
+g++ -std=c++17 -c main.cpp -o main.o
+g++ main.o flecs.o $(pkg-config --libs raylib) -lrt -lpthread -lm -o myapp
+or
+g++ main.o flecs.o $(pkg-config --libs sdl3) -lrt -lpthread -lm -o myapp
+```
+
 
 ## 4. Run the executable
 
