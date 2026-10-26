@@ -27,16 +27,16 @@ You can delete `flecs.c` after this if you don't need to rebuild Flecs. Keep `fl
 Run these commands every time you edit `main.cpp`:
 
 ```bash
-g++ -std=c++17 -c main.cpp -o main.o
-g++ main.o flecs.o -lrt -lpthread -lm -o myapp
+g++ -std=c++23 -c main.cpp -o main.o
+g++ main.o flecs.o -lpthread -lm -o myapp
 ```
 If you are also using **Raylib** or **SDL3**:
 
 ```bash
-g++ -std=c++17 -c main.cpp -o main.o
-g++ main.o flecs.o $(pkg-config --libs raylib) -lrt -lpthread -lm -o myapp
+g++ -std=c++23 -c main.cpp -o main.o
+g++ main.o flecs.o $(pkg-config --libs raylib) -lpthread -lm -o myapp
 or
-g++ main.o flecs.o $(pkg-config --libs sdl3) -lrt -lpthread -lm -o myapp
+g++ main.o flecs.o $(pkg-config --libs sdl3) -lpthread -lm -o myapp
 ```
 
 

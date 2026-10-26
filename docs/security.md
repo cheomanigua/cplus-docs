@@ -44,7 +44,7 @@ Your original working command is:
 
 ```text
 g++ main.o flecs.o $(pkg-config --libs sdl3) \
-    -lrt -lpthread -lm -o myapp
+    -lpthread -lm -o myapp
 ```
 
 This links your game with Flecs and SDL3.
