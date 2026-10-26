@@ -129,9 +129,10 @@ auto entity = world.entity();
 
 [!NOTE]
 <strong>IMPORTANT</strong>
-<code>auto entity</code> is a handle, not an entity. We just created an entity and stored it in a handle. This is useful for adding components later.
+<code>auto entity</code> is a handle, not an entity. We just created an entity and stored it in a handle. This is useful for adding components later.</br>
+You can create entities without a handle: <code>world.entity()</code>. This is most used when creating entities in hulk inside a loop. Components must be added at also: <code>world.entity().set(Position{10.0f, 20.0f}).set(Velocity{15.0f, 0.0f});</code>
 
-You can create different entities using the same handle:
+You can create different entities using the same handle, but it makes more sense to use a loop:
 
 ```cpp
 auto enemy = world.entity();
@@ -358,6 +359,7 @@ world.remove_all<TagSelected>()
 You can create systems directly with Flecs. In this example, we create a movement system. It will iterate through all entities having Position and Velocity components and calculate their positions:
 
 ```cpp
+float deltaTime {1.0f/60.f};
 world.system<Position, const Velocity>("Movement")
     .each([&](Position& p, const Velocity& v) {
         p.value.x += v.value.x * deltaTime;
@@ -370,6 +372,11 @@ then, in the game loop, we update all Flecs systems by adding this line:
 ```cpp
 world.progress(deltaTime);
 ```
+
+[!TIP]
+<strong>TIP</strong>
+<code>deltaTime</code> is passed by reference into <code>world.system</code> by using <code>&</code> in <code>.each([&]</code>. Any variable not local to <code>world.system</code> can be passed by reference by using <code>&</code>, regardless of how many variables you want to pass.
+If you want to pass by value, use <code>=</code>.
 
 ## 12. Create a prefab
 
