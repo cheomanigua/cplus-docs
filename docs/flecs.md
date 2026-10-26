@@ -130,7 +130,22 @@ auto entity = world.entity();
 [!NOTE]
 <strong>IMPORTANT</strong>
 <code>auto entity</code> is a handle, not an entity. We just created an entity and stored it in a handle. This is useful for adding components later.</br>
-You can create entities without a handle: <code>world.entity()</code>. This is most used when creating entities in hulk inside a loop. Components must be added at also: <code>world.entity().set(Position{10.0f, 20.0f}).set(Velocity{15.0f, 0.0f});</code>
+
+### Handles
+
+You can create entities without a handle. This is most common when creating entities in bulk inside a loop. Components must be added at also:
+
+```cpp
+flecs::world world{};
+
+// Create 5 entities
+for(std::size_t i{0}; i < 5; ++i) {
+    float value {static_cast<float>(i)};
+    world.entity()
+        .set(Position{value, value})
+        .set(Velocity{value, value});
+}
+```
 
 You can create different entities using the same handle, but it makes more sense to use a loop:
 
@@ -261,12 +276,12 @@ That's the core ECS idea.
 ```cpp
 flecs::world world;
 
-// Option 1
+// Option 1 - with handle
 auto player = world.entity();
 player.set<Position>({50.0f, 100.0f});
 player.set<Velocity>({10.0f, 10.0f});
 
-// Option 2
+// Option 2 - without handle
 world.entity("Player")
     .set<Position>({100.0f, 100.0f})
     .set<Velocity>({0.0f, 0.0f});
@@ -760,8 +775,7 @@ int main() {
     world.entity(523).destruct();
     printPos(posQ);
 
-    auto e = world.entity();
-    e.set<Position>({5.0f, 5.0f});
+    world.entity().set(Position{5.0f, 5.0f});
     printPos(posQ);
 }
 ```
