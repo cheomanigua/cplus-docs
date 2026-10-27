@@ -1,6 +1,6 @@
-# SS — Simple SDL3 Game Library
+# WP — Simple SDL3 Wrapper
 
-A lightweight, header-only C++ library built on SDL3, SDL3_ttf, and SDL3_image for creating simple 2D games.
+A lightweight, header-only C++ wrapper built on SDL3, SDL3_ttf, and SDL3_image for creating simple 2D games.
 
 ## Requirements
 
@@ -159,6 +159,7 @@ Repeated requests with the same text and color reuse the cached texture. Differe
 | `CheckCollision(Circle, Circle)` | Circle vs. circle. | `wp::CheckCollision(ball, ball2);` |
 | `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall, wall2);` |
 | `CheckCollision(Circle, Rectangle)` | Circle vs. rectangle. | `wp::CheckCollision(ball, wall);` |
+| `CheckCollision(Rectangle, Circle)` | Rectangle vs. circle. | `wp::CheckCollision(wall, ball);` |
 | `CheckCollision(Sprite, Rectangle)` | Sprite vs. rectangle. | `wp::CheckCollision(bunny, wall);` |
 | `CheckCollision(Sprite, Circle)` | Sprite vs. circle. | `wp::CheckCollision(bunny, ball);` |
 | `CheckCollision(Sprite, Sprite)` | Sprite vs. sprite. | `wp::CheckCollision(bunny, bunny2);` |
