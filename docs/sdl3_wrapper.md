@@ -26,13 +26,35 @@ All functions and types are defined in the `wp` namespace.
 
 Predefined `SDL_Color` constants for quick styling.
 
-| **Constant** | **RGBA Values** | 
-|-|-| 
-| `wp::Blue` | `{0, 121, 241, 255}` | 
-| `wp::Red` | `{230, 41, 55, 255}` | 
-| `wp::White` | `{255, 255, 255, 255}` | 
-| `wp::Black` | `{0, 0, 0, 255}` | 
-| `wp::Gray` | `{80, 80, 80, 255}` | 
+| Constant | RGBA Values |
+| --- | --- |
+| `wp::Black` | `{0, 0, 0, 255}` |
+| `wp::Navy` | `{0, 0, 128, 255}` |
+| `wp::Blue` | `{0, 0, 255, 255}` |
+| `wp::DarkGreen` | `{0, 128, 0, 255}` |
+| `wp::Teal` | `{0, 128, 128, 255}` |
+| `wp::DeepSkyBlue` | `{0, 128, 255, 255}` |
+| `wp::Green` | `{0, 255, 0, 255}` |
+| `wp::SpringGreen` | `{0, 255, 128, 255}` |
+| `wp::Cyan` | `{0, 255, 255, 255}` |
+| `wp::Maroon` | `{128, 0, 0, 255}` |
+| `wp::Purple` | `{128, 0, 128, 255}` |
+| `wp::MediumPurple` | `{128, 0, 255, 255}` |
+| `wp::Olive` | `{128, 128, 0, 255}` |
+| `wp::Gray` | `{128, 128, 128, 255}` |
+| `wp::LightSteelBlue` | `{128, 128, 255, 255}` |
+| `wp::YellowGreen` | `{128, 255, 0, 255}` |
+| `wp::LightGreen` | `{128, 255, 128, 255}` |
+| `wp::LightCyan` | `{128, 255, 255, 255}` |
+| `wp::Red` | `{255, 0, 0, 255}` |
+| `wp::Crimson` | `{255, 0, 128, 255}` |
+| `wp::Magenta` | `{255, 0, 255, 255}` |
+| `wp::Orange` | `{255, 128, 0, 255}` |
+| `wp::Salmon` | `{255, 128, 128, 255}` |
+| `wp::Pink` | `{255, 128, 255, 255}` |
+| `wp::Yellow` | `{255, 255, 0, 255}` |
+| `wp::Khaki` | `{255, 255, 128, 255}` |
+| `wp::White` | `{255, 255, 255, 255}` |
 
 ### Initialization and Lifecycle
 

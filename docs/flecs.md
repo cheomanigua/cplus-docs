@@ -51,11 +51,12 @@ g++ main.o flecs.o $(pkg-config --libs sdl3) -lpthread -lm -o myapp
 [!NOTE] <strong>NOTE</strong>
 Below are the most common APIs used in <strong>Flecs</strong>. For a full example, go to the <a href="/#flecs#example">Example</a> section of this page.
 
+* **World** = manages entities/components and the ECS
 * **Entity** = an object/ID in the ECS
 * **Component** = data attached to an entity
-* **World** = manages entities/components and the ECS
-* **Query** = finds entities having specific components
 * **System** = a function that operates on entities/components
+* **Prefab** = a reusable template for an entity and its components
+* **Query** = finds entities having specific components
 
 Here's the basic API you'll use most often.
 
@@ -759,23 +760,35 @@ int main() {
             pos.y += vel.y * it.delta_time();
         });
 
+	// Creating 5 entities with handle
     for(std::size_t i = 0; i < 5; ++i) {
         auto e = world.entity();
         float value = static_cast<float>(i);
-        e.set<Position>({value, value});
-        e.set<Velocity>({value, value});
+        e.set(Position{value, value});
+        e.set(Velocity{value, value});
     }
     printPos(posQ);
 
+	// Creating 5 entities without handle
+	for(std::size_t i = 0; i < 5; ++i) {
+        float value = static_cast<float>(i);
+		world.entity()
+			.set(Position{value, value})
+			.set(Velocity{value, value});
+	}
+    printPos(posQ);
+
     for(std::size_t frame = 0; frame < 60; ++frame) {
-        world.progress(dt);
+        world.progress(dt); // Process all flecs systems
     }
     printPos(posQ);
 
     world.entity(523).destruct();
     printPos(posQ);
 
-    world.entity().set(Position{5.0f, 5.0f});
+    world.entity()
+		.set(Position{8.0f, 8.0f})
+		.set(Velocity{8.0f, 8.0f});
     printPos(posQ);
 }
 ```
