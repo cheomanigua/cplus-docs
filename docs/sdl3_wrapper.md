@@ -131,7 +131,14 @@ Repeated requests with the same text and color reuse the cached texture. Differe
 
 ### Collision Detection
 
-All collision functions return `true` when a collision is detected and `false` otherwise.
+- All collision functions are overloaded.
+- All collision functions return `true` when a collision is detected and `false` otherwise.
+
+#### 1. Overloads that work directly with SDL types
+
+- These functions perform the actual collision detection using points, circles, and rectangles.
+- These functions contain the actual collision mathematics: checking distances, comparing coordinates, and determining whether shapes overlap.
+- Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do not count. Point-to-rectangle collision includes the left and top edges but excludes the right and bottom edges.
 
 | Overload | Description | Example |
 |---|---|---|
@@ -140,13 +147,22 @@ All collision functions return `true` when a collision is detected and `false` o
 | `CheckCollision(centerA, radiusA, centerB, radiusB)` | Circle vs. circle using positions and radii. | `wp::CheckCollision(ball.position, ball.radius, enemy.position, enemy.radius);` |
 | `CheckCollision(SDL_FRect, SDL_FRect)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall.GetBounds(), otherWall.GetBounds());` |
 | `CheckCollision(center, radius, SDL_FRect)` | Circle vs. rectangle. | `wp::CheckCollision(ball.position, ball.radius, wall.GetBounds());` |
-| `CheckCollision(Circle, Circle)` | Circle vs. circle. | `wp::CheckCollision(ball, enemy);` |
-| `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall, otherWall);` |
+
+#### 2. Overloads that work with your custom classes
+
+- These functions accept your own objects, such as `Circle`, `Rectangle`, and `Sprite`.
+- These functions act as convenient wrappers: they extract the relevant positions, radii, or bounds and pass them to the SDL-type overloads.
+- You just can type: `wp::CheckCollision(N, N);` as long as the type of N is supported. 
+
+| Overload | Description | Example |
+|---|---|---|
+| `CheckCollision(Circle, Circle)` | Circle vs. circle. | `wp::CheckCollision(ball, ball2);` |
+| `CheckCollision(Rectangle, Rectangle)` | Rectangle vs. rectangle. | `wp::CheckCollision(wall, wall2);` |
 | `CheckCollision(Circle, Rectangle)` | Circle vs. rectangle. | `wp::CheckCollision(ball, wall);` |
 | `CheckCollision(Sprite, Rectangle)` | Sprite vs. rectangle. | `wp::CheckCollision(bunny, wall);` |
+| `CheckCollision(Sprite, Circle)` | Sprite vs. circle. | `wp::CheckCollision(bunny, ball);` |
 | `CheckCollision(Sprite, Sprite)` | Sprite vs. sprite. | `wp::CheckCollision(bunny, bunny2);` |
 
-Rectangle-to-rectangle collision uses strict overlap, so touching edges alone do not count. Point-to-rectangle collision includes the left and top edges but excludes the right and bottom edges.
 
 ### Timing and Frame Rate
 
