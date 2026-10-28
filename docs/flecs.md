@@ -58,7 +58,6 @@ Below are the most common APIs used in <strong>Flecs</strong>. For a full exampl
 * **Prefab** = a reusable template for an entity and its components
 * **Query** = finds entities having specific components
 
-Here's the basic API you'll use most often.
 
 ### Include Flecs
 
@@ -118,23 +117,15 @@ The Flecs `world` takes the role that the EnTT `registry` plays.
 
 ## 3. Create an entity
 
-```cpp
-flecs::entity entity = world.entity();
-```
+You can create entities with handle or without handle.
 
-You normally let `auto` handle the type.
+### Without handle
 
 ```cpp
-auto entity = world.entity();
+world.entity();
 ```
 
-[!NOTE]
-<strong>IMPORTANT</strong>
-<code>auto entity</code> is a handle, not an entity. We just created an entity and stored it in a handle. This is useful for adding components later.</br>
-
-### Handles
-
-You can create entities without a handle. This is most common when creating entities in bulk inside a loop. Components must be added at also:
+This is most common when creating entities in bulk inside a loop. Components must be added also:
 
 ```cpp
 flecs::world world{};
@@ -147,6 +138,28 @@ for(std::size_t i{0}; i < 5; ++i) {
         .set(Velocity{value, value});
 }
 ```
+
+You can create an entity without a handle by adding a name:
+
+```cpp
+world.entity("Player");
+```
+
+... and then later add a handle to add components or whatever:
+
+```cpp
+auto player = world.lookup("Player");
+```
+
+### With handle
+
+```cpp
+flecs::entity entity = world.entity();
+or
+auto entity = world.entity();
+```
+
+Creating an entity with a handle is useful if we plan to process that specific entity in a special way.
 
 You can create different entities using the same handle, but it makes more sense to use a loop:
 
@@ -164,19 +177,8 @@ auto enemy  = world.entity();
 auto bullet = world.entity();
 ```
 
-You can create an entity without a handle by adding a name:
-
-```cpp
-world.entity("Player");
-```
-
-... and then later add a handle to add components or whatever:
-
-```cpp
-auto player = world.lookup("Player");
-```
-
-In any case, Flecs generates the entity IDs for you.
+[!NOTE]
+Regardless of how to create the entity, Flecs generates the entity <strong>IDs</strong> for you.
 
 ## 4. Get the entity ID
 
