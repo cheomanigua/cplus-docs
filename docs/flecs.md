@@ -380,8 +380,8 @@ You can create systems directly with Flecs. In this example, we create a movemen
 float deltaTime {1.0f/60.f};
 world.system<Position, const Velocity>("Movement")
     .each([&](Position& p, const Velocity& v) {
-        p.value.x += v.value.x * deltaTime;
-        p.value.y += v.value.y * deltaTime;
+        p.x += v.x * deltaTime;
+        p.y += v.y * deltaTime;
     });
 ```
 
@@ -389,6 +389,13 @@ then, in the game loop, we update all Flecs systems by adding this line:
 
 ```cpp
 world.progress(deltaTime);
+```
+
+If you gave a system a handle, you could manually  run that particular system:
+
+```cpp
+flecs::system mov = world.system...;
+mov.run();
 ```
 
 [!TIP]
@@ -488,6 +495,7 @@ query.each([](Position& pos, const Velocity& vel)
 This is essentially an ECS system:
 
 ```cpp
+// For this example we have created our own custom system, but you should use Flecs systems instead
 void movementSystem(flecs::query<Position, const Velocity>& query, float dt)
 {
     query.each([dt](Position& pos, const Velocity& vel)
@@ -499,7 +507,7 @@ void movementSystem(flecs::query<Position, const Velocity>& query, float dt)
 
 int main() {
     flecs::world world;
-    constexpr float dt {1.0f / 60.0f};
+    const float dt {1.0f / 60.0f};
     auto query = world.query_builder<Position, const Velocity>().cached().build();
     movementSystem(query, dt);
 }
@@ -558,54 +566,7 @@ query.find()
 <strong>TIP</strong>
 <code>query.each</code> is generally for <strong>processing all matching entities</strong>, while <code>query.find</code> is for <strong>finding one matching entity</strong>.
 
-## 15. Query without the entity
-
-Sometimes you don't need the entity ID.
-
-You can simply omit it from the callback:
-
-```cpp
-auto query = world.query<Position>();
-
-query.each([](Position& pos)
-{
-    pos.x += 1.0f;
-});
-```
-
-The callback can receive the components you need.
-
-For example:
-
-```cpp
-auto query = world.query<Position, Velocity>();
-
-query.each([](Position& pos, Velocity& vel)
-{
-    pos.x += vel.x;
-    pos.y += vel.y;
-});
-```
-
-The important distinction is:
-
-```cpp
-query.each([](flecs::entity entity, Position& position)
-{
-    // entity + component
-});
-```
-
-versus:
-
-```cpp
-query.each([](Position& position)
-{
-    // component only
-});
-```
-
-## 16. Tags / empty components
+## 15. Tags / empty components
 
 A component doesn't need to contain data.
 
@@ -655,7 +616,7 @@ means:
 
 You don't need a `bool selected` inside another component.
 
-## 17. Remove tags
+## 16. Remove tags
 
 Tags use the same `remove` API:
 
@@ -663,7 +624,7 @@ Tags use the same `remove` API:
 entity.remove<Selected>();
 ```
 
-## 18. Replace/update a component
+## 17. Replace/update a component
 
 In Flecs, `set` can be used to add or replace a component value:
 
@@ -693,7 +654,7 @@ auto* health = enemy.get_mut<Health>();
 health->value = 50;
 ```
 
-## 19. Check whether an entity is alive
+## 18. Check whether an entity is alive
 
 Use `is_alive()`:
 
@@ -706,7 +667,7 @@ if (entity.is_alive())
 
 This becomes useful when dealing with entities whose lifetime isn't guaranteed.
 
-## 20. Reset the registry
+## 19. Reset the registry
 
 Remove all entities and all components from the registry:
 
@@ -714,7 +675,7 @@ Remove all entities and all components from the registry:
 world.reset();
 ```
 
-## 21. Remove vs Reset vs Destruct
+## 20. Remove vs Reset vs Destruct
 
 | Code                               | Effect                                     |
 | ---------------------------------- | ------------------------------------------ |
