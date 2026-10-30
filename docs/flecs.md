@@ -405,11 +405,13 @@ If you want to pass by value, use <code>=</code>.
 
 ## 12. Create a prefab
 
-A prefab is a template used to create entities (instances). It defines default component values that instances can inherit.
+A prefab is a template used to create entities (instances). It defines default component values that are used when instances are created.
 
-The key distinction is whether an entity **owns its own component** or **inherits the component from a prefab**.
+An important distinction in Flecs 4 is that **components are copied from a prefab to its instances by default**. This means that an instance normally owns its own copy of the component rather than inheriting it dynamically.
 
-### Version 1a — Explicit instance value, no auto-override
+Consequently, changing a component on the prefab after an instance has been created does not automatically change the corresponding component on that instance.
+
+### Version 1a — Explicit instance value
 
 
 ```cpp
@@ -423,10 +425,9 @@ auto destroyer = world.entity("Destroyer1")
 
 - Initial destroyer fuel: 4000.
 - The destroyer owns its own `Fuel` component because `.set<Fuel>()` is called on the instance.
-- Changing the prefab's fuel to 3000 does not change the destroyer's fuel.
+- Changing the prefab's fuel to 3000 does not change the destroyer's fuel. It remains 4000.
 
-
-### Version 1b — Inherited fuel, no auto-override
+### Version 1b — Default prefab instantiation
 
 
 ```cpp
@@ -437,62 +438,76 @@ auto destroyer = world.entity("Destroyer1")
     .is_a(surfaceShip);
 ```
 
-- Initial destroyer fuel: 5000, read from the prefab.
-- The destroyer does not own its own `Fuel` component.
-- Changing the prefab's fuel to 3000 means the destroyer now inherits 3000.
-
-### Version 2a — Auto-override plus explicit instance value
-
-
-```cpp
-auto surfaceShip = world.prefab("SurfaceShip")
-    .set_auto_override(Fuel{5000.0});
-
-auto destroyer = world.entity("Destroyer1")
-    .is_a(surfaceShip)
-    .set<Fuel>({4000.0});
-```
-
-- Initial destroyer fuel: 4000.
-- The destroyer owns its own `Fuel` component.
-- Changing the prefab's fuel to 3000 does not change the destroyer's fuel.
-- Auto-override already ensures the instance owns `Fuel`; the explicit `.set<Fuel>()` sets its desired starting value.
-
-
-### Version 2b — Auto-override without explicit instance value
-
-
-```cpp
-auto surfaceShip = world.prefab("SurfaceShip")
-    .set_auto_override(Fuel{5000.0});
-
-auto destroyer = world.entity("Destroyer1")
-    .is_a(surfaceShip);
-```
-
 - Initial destroyer fuel: 5000.
-- The destroyer automatically receives its own `Fuel` component when instantiated.
+- The destroyer owns its own `Fuel` component because Flecs 4 copies components from prefabs to instances by default.
+- The destroyer's initial `Fuel` value is copied from the prefab.
 - Changing the prefab's fuel to 3000 does not change the destroyer's fuel. It remains 5000.
 
+**Important:** Even without explicitly calling `.set<Fuel>()` on the instance, the instance receives its own copy of `Fuel`.
 
 ### Summary Table
 
-In an scenario where the prefab `Fuel` component is changed at runtime from 5000 to 3000:
+Assume the prefab's `Fuel` component is changed at runtime from 5000 to 3000, after the destroyer has been created.
 
 | Version | Destroyer owns `Fuel`? | Initial fuel | Fuel after prefab changes to 3000 |
 | --- | --- | --- | --- |
 | 1a | Yes (explicit `.set()`) | 4000 | 4000 |
-| 1b | No (inherited) | 5000 | 3000 |
-| 2a | Yes (auto-override and explicitly set) | 4000 | 4000 |
-| 2b | Yes (auto-override) | 5000 | 5000 |
+| 1b | Yes (default instantiation copy) | 5000 | 5000 |
 
 ### Conclusion
 
-- **Versions 1a and 2a**: Both give the destroyer an independent fuel value of 4000. Auto-override in Version 2a is redundant for ownership because the instance explicitly sets `Fuel`.
-- **Version 1b**: The destroyer inherits `Fuel` directly from the prefab, so changes to the prefab's fuel value are reflected in the destroyer.
-- **Version 2b**: Auto-override automatically gives the destroyer its own copy of `Fuel`, initialized to 5000.
+- **Version 1a:** The destroyer owns its own `Fuel` component, explicitly initialized to 4000. Subsequent changes to the prefab do not affect it.
+- **Version 1b:** Flecs 4 copies the prefab's component to the instance by default. The destroyer therefore owns its own copy, initialized to 5000. Subsequent changes to the prefab do not affect it.
 
-The practical rule: If an instance owns its `Fuel` component, changing the prefab's fuel value does not change the instance's value. If the instance only inherits `Fuel`, it sees the updated prefab value.
+**The practical rule:** In Flecs 4, prefab components are copied to instances by default. An instance therefore owns its own component, even when no explicit `.set()` is called on it. Changing the prefab's component afterward does not change the instance's copy.
+
+### Enabling component inheritance
+
+If you want instances to inherit a component from a prefab instead of receiving their own copies, you can change the component's `OnInstantiate` policy to `flecs::Inherit`.
+
+For example:
+
+
+```cpp
+world.component<Fuel>()
+    .add(flecs::OnInstantiate, flecs::Inherit);
+```
+
+This configuration must be applied before creating the prefab instances.
+
+With this policy:
+
+
+```cpp
+auto surfaceShip = world.prefab("SurfaceShip")
+    .set<Fuel>({5000.0});
+
+auto destroyer = world.entity("Destroyer1")
+    .is_a(surfaceShip);
+
+std::cout << destroyer.get<Fuel>().value << "\n";
+
+surfaceShip.set(Fuel{8000.0});
+
+std::cout << destroyer.get<Fuel>().value << "\n";
+```
+
+Expected output:
+
+```text
+5000
+8000
+```
+
+In this case:
+
+- The destroyer does not own its own `Fuel` component.
+- `destroyer.get<Fuel>()` retrieves the component from the prefab through inheritance.
+- Changing the prefab's `Fuel` value is reflected when accessing the inherited component through the destroyer.
+
+**Important:** This changes the default instantiation behavior for `Fuel`. Use it when you explicitly want instances to inherit `Fuel` rather than own independent copies.
+
+If you later want a particular instance to own its own copy despite this inheritance policy, you can use `set_auto_override()` on the prefab.
 
 ## 13. Create a query
 

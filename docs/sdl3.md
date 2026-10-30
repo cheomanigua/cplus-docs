@@ -2,6 +2,17 @@
 
 Practical programming documentation · C++ / SDL3
 
+# Includes
+
+```cpp
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
+#include <SDL3_ttf/SDL_ttf.h>
+#include <SDL3_image/SDL_image.h>
+```
+
+`SDL3_ttf` and `SDL3_image` are optional. They are needed when using fonts or images.
+
 # Compilation
 
 ### Command line
@@ -25,7 +36,7 @@ g++ -std=c++23 *.cpp flecs.o \
 - `sdl3-image`: Image library
 - `sdl3-ttf`: Font library
 
-If you are not using images or fonts, you don't need those libraries during compilation.
+If you are not using images or fonts, you don't need `sdl3-image` or `sdl3-ttf` libraries during compilation.
 
 # FPS and Delta Time
 
