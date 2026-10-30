@@ -638,7 +638,7 @@ query.find()
 <strong>TIP</strong>
 <code>query.each</code> is generally for <strong>processing all matching entities</strong>, while <code>query.find</code> is for <strong>finding one matching entity</strong>.
 
-## 15. Tags / empty components
+## 15. Create a tag
 
 A component doesn't need to contain data.
 
@@ -688,7 +688,7 @@ means:
 
 You don't need a `bool selected` inside another component.
 
-## 16. Remove tags
+## 16. Remove a tag
 
 Tags use the same `remove` API:
 
