@@ -1,6 +1,33 @@
-# SDL3 – FPS, Delta Time, VSync and Frame Timing
+# SDL3
 
 Practical programming documentation · C++ / SDL3
+
+# Compilation
+
+### Command line
+
+```text
+g++ -std=c++20 -O2 main.cpp -o game \
+    $(pkg-config --cflags --libs sdl3 sdl3-image sdl3-ttf)
+```
+With Flecs:
+
+```text
+g++ -std=c++23 *.cpp flecs.o \
+    $(pkg-config --cflags --libs sdl3 sdl3-image sdl3-ttf) \
+    -lpthread -lm \
+    -o game
+```
+
+### Libraries
+
+- `sdl3`: Base library
+- `sdl3-image`: Image library
+- `sdl3-ttf`: Font library
+
+If you are not using images or fonts, you don't need those libraries during compilation.
+
+# FPS and Delta Time
 
 ## 1. Introduction
 
