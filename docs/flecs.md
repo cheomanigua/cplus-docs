@@ -403,19 +403,22 @@ If you gave a system a handle, you could manually run that particular system:
 ```cpp
 flecs::system mov = world.system<Position, const Velocity>("Movement")
     .each([&](Position& p, const Velocity& v) {
-// ...
+    // ...
 
 mov.run(); // ADD THIS LINE LATER ON
 ```
 
-If you don want your system to run in the main pipeline (`world.progress()`), you have to exclude it my adding `.kind(0)`:
+However, if the main pipeline (`world.progress()`) is being called somewhere, the mov system will run again in addition to `mov.run()`.
+
+To prevent this duplicate call, you have to exclude your mov system from being called by the main pipeline. For that, you have to add `.kind(0)` in your construct:
 
 ```cpp
-auto mov = world.system<Position, const Velocity>("Movement")
-    .each([&](Position& p, const Velocity& v) {
+flecs::system mov = world.system<Position, const Velocity>("Movement")
     .kind(0) // ADD THIS LINE
+    .each([&](Position& p, const Velocity& v) {
     // ...
 ```
+Now, mov system will be ignored by `world.progress()`.
 
 ### Example (simplified)
 
