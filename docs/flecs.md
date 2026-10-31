@@ -391,17 +391,59 @@ then, in the game loop, we update all Flecs systems by adding this line:
 world.progress(deltaTime);
 ```
 
-If you gave a system a handle, you could manually  run that particular system:
-
-```cpp
-flecs::system mov = world.system...;
-mov.run();
-```
-
 [!TIP]
 <strong>TIP</strong>
 <code>deltaTime</code> is passed by reference into <code>world.system</code> by using <code>&</code> in <code>.each([&]</code>. Any variable not local to <code>world.system</code> can be passed by reference by using <code>&</code>, regardless of how many variables you want to pass.
 If you want to pass by value, use <code>=</code>.
+
+### Handle
+
+If you gave a system a handle, you could manually run that particular system:
+
+```cpp
+flecs::system mov = world.system<Position, const Velocity>("Movement")
+    .each([&](Position& p, const Velocity& v) {
+// ...
+
+mov.run(); // ADD THIS LINE LATER ON
+```
+
+If you don want your system to run in the main pipeline (`world.progress()`), you have to exclude it my adding `.kind(0)`:
+
+```cpp
+auto mov = world.system<Position, const Velocity>("Movement")
+    .each([&](Position& p, const Velocity& v) {
+    .kind(0) // ADD THIS LINE
+    // ...
+```
+
+### Example (simplified)
+
+```cpp
+world.system<>()
+        std::cout << "System 1" << "\n";
+
+auto sys2 = world.system<>()
+        std::cout << "System 2" << "\n";
+
+auto sys3 = world.system<>()
+    .kind(0)
+        std::cout << "System 3" << "\n";
+
+/// Inside game loop
+world.progress();
+sys2.run():
+sys3.run();
+```
+
+Output:
+
+```text
+System1
+System2
+System2
+System3
+```
 
 ## 12. Create a prefab
 
