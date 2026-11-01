@@ -14,13 +14,15 @@ curl -L -o flecs.c https://raw.githubusercontent.com/SanderMertens/flecs/master/
 
 ## 2. Compile Flecs
 
-Compile `flecs.c` into `flecs.o`. This only needs to be done once:
+Compile `flecs.c` into `flecs.o`. This only needs to be done once per project:
 
 ```bash
 gcc -std=gnu99 -c flecs.c -o flecs.o
 ```
 
 You can delete `flecs.c` after this if you don't need to rebuild Flecs. Keep `flecs.h` because your C++ source files need it when compiling.
+
+So, in every Flecs project, you must have these two files: `flecs.h` and `flecs.o`.
 
 ## 3. Compile and build
 
@@ -30,12 +32,15 @@ Run these commands every time you edit `main.cpp`:
 g++ -std=c++23 -c main.cpp -o main.o
 g++ main.o flecs.o -lpthread -lm -o myapp
 ```
-If you are also using **Raylib** or **SDL3**:
+If you are also using **Raylib** or **SDL3**, run these commands instead:
 
 ```bash
 g++ -std=c++23 -c main.cpp -o main.o
+
+# If using Raylib
 g++ main.o flecs.o $(pkg-config --libs raylib) -lpthread -lm -o myapp
-or
+
+# If using SDL3
 g++ main.o flecs.o $(pkg-config --libs sdl3) -lpthread -lm -o myapp
 ```
 
@@ -49,7 +54,7 @@ g++ main.o flecs.o $(pkg-config --libs sdl3) -lpthread -lm -o myapp
 # API
 
 [!NOTE] <strong>NOTE</strong>
-Below are the most common APIs used in <strong>Flecs</strong>. For a full example, go to the <a href="/#flecs#example">Example</a> section of this page.
+Below are the most common APIs used in <strong>Flecs</strong>. For a full example, go to the <a href="#flecs#example">Example</a> section of this page.
 
 * **World** = manages entities/components and the ECS
 * **Entity** = an object/ID in the ECS
@@ -305,7 +310,7 @@ const auto& pos = player.get<Position>();
 
 std::println("Position: {}, {}", pos.x, pos.y);
 ```
-For systems and queries, however, you will usually access multiple components directly through the [query callback](#flecs#11.-create-a-query).
+For systems and queries, however, you will usually access multiple components directly through the [query callback](#flecs#13.-create-a-query).
 
 If you have to modify the component, you can use `get_mut`:
 
@@ -377,7 +382,7 @@ world.remove_all<TagSelected>()
 You can create systems directly with Flecs. In this example, we create a movement system. It will iterate through all entities having Position and Velocity components and calculate their positions:
 
 ```cpp
-float deltaTime {1.0f/60.f};
+const float deltaTime {1.0f/60.f};
 world.system<Position, const Velocity>("Movement")
     .each([&](Position& p, const Velocity& v) {
         p.x += v.x * deltaTime;
@@ -844,15 +849,14 @@ void printPos(flecs::query<const Position>& q)
 
 int main() {
     flecs::world world{};
-    constexpr float dt {1.0f / 60.0f};
-    auto posQ = world.query<const Position>();
+    const float dt {1.0f / 60.0f};
+    auto posQ = world.query_builder<const Position>().cached().build();
 
 	// Create a system. Flecs manages its query and execution
 	world.system<Position, const Velocity>("Movement")
-        .each([](flecs::iter& it, std::size_t,
-                 Position& pos, const Velocity& vel) {
-            pos.x += vel.x * it.delta_time();
-            pos.y += vel.y * it.delta_time();
+        .each([&](Position& pos, const Velocity& vel) {
+            pos.x += vel.x * dt;
+            pos.y += vel.y * dt;
         });
 
 	// Creating 5 entities with handle
@@ -888,30 +892,26 @@ int main() {
 }
 ```
 
-## The Flecs API I'd learn first
-
-If you're starting out, you don't need to learn the entire Flecs API. I'd focus on these first:
+## Basic Flecs API
 
 | API                   | Purpose               |
 | --------------------- | --------------------- |
-| `flecs::world`        | ECS container         |
-| `world.entity()`      | Create entity         |
-| `entity.destruct()`   | Destroy entity        |
-| `entity.is_alive()`   | Check entity validity |
-| `entity.id()`         | Get entity identifier |
-| `entity.set<T>()`     | Add component to entity  |
-| `entity.set<T>()`     | Update entity's component |
-| `entity.get<T>()`     | Get component from entity        |
-| `entity.get_mut<T>()` | Get mutable component from entity|
-| `entity.remove<T>()`  | Remove component from entity     |
-| `entity.has<T>()`     | Check component from entity      |
-| `world.system<T>()`   | Create system         |
-| `world.prefab()`      | Create prefab         |
-| `world.query<T>()`    | Create query          |
-| `query.each()`        | Iterate query results (all) |
-| `query.find()`        | Iterate query results (not all) |
-
-Once these make sense, **most of the basic Flecs ECS model becomes much easier to understand**.
+| `flecs::world`        | World: ECS container         |
+| `world.entity()`      | Entity: Create entity         |
+| `entity.destruct()`   | Entity: Destroy entity        |
+| `entity.is_alive()`   | Entity: Check entity validity |
+| `entity.id()`         | Entity: Get entity identifier |
+| `entity.set<T>()`     | Component: Add component to entity  |
+| `entity.set<T>()`     | Component: Update entity's component |
+| `entity.get<T>()`     | Component: Get component from entity        |
+| `entity.get_mut<T>()` | Component: Get mutable component from entity|
+| `entity.remove<T>()`  | Component: Remove component from entity     |
+| `entity.has<T>()`     | Component: Check component from entity      |
+| `world.system<T>()`   | System: Create system         |
+| `world.prefab()`      | Prebab: Create prefab         |
+| `world.query<T>()`    | Query: Create query          |
+| `query.each()`        | Query: Iterate query results (all) |
+| `query.find()`        | Query: Iterate query results (not all) |
 
 ### Clarification
 
