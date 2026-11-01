@@ -749,12 +749,29 @@ Assume the prefab's `Fuel` component is changed at runtime from 5000 to 3000, af
 
 **The practical rule:** In Flecs 4, prefab components are copied to instances by default. An instance therefore owns its own component, even when no explicit `.set()` is called on it. Changing the prefab's component afterward does not change the instance's copy.
 
+### Multiple "inheritance" levels
+
+An entiy can have its componets copied from multiple inheritance levels:
+
+```cpp
+// Create prefabs
+flecs::entity surfaceShip = world.prefab("SurfaceShip")
+    .set(Speed{50});
+
+flecs::entity frigate = world.prefab("Frigate")
+    .is_a(surfaceShip)
+    .set(Attack{30})
+
+// Create entity
+world.entity("Viper")
+    .is_a(frigate) // Speed 50, Attack 30
+```
+
 ### Enabling component inheritance
 
 If you want instances to inherit a component from a prefab instead of receiving their own copies, you can change the component's `OnInstantiate` policy to `flecs::Inherit`.
 
 For example:
-
 
 ```cpp
 world.component<Fuel>()
@@ -774,9 +791,7 @@ auto destroyer = world.entity("Destroyer1")
     .is_a(surfaceShip);
 
 std::cout << destroyer.get<Fuel>().value << "\n";
-
 surfaceShip.set(Fuel{8000.0});
-
 std::cout << destroyer.get<Fuel>().value << "\n";
 ```
 
@@ -895,46 +910,24 @@ int main() {
 
 ### Clarification
 
-There is an important difference between checking one entity and querying many entities.
-
-```cpp
-entity.has<Position>()
-```
-
-means: **Does this specific entity have `Position`?**
-
-Whereas:
-
-```cpp
-world.query<Position>()
-```
-
-means: **Which entities have `Position`?**
-
-And:
-
-```cpp
-query.each(...)
-```
-
-means: **Process every entity matched by the query.**
+There is an important difference between checking one entity and querying many entities:
 
 | API                | What it does                                       | Scope         |
 | ------------------ | -------------------------------------------------- | ------------- |
 | `entity.has<T>()`  | Checks whether **one specific entity** has `T`     | One entity    |
 | `world.query<T>()` | Creates a **query** for entities that have `T`     | Many entities |
 | `query.each()`     | **Iterates** through **ALL** entities matched by the query | Many entities |
-| `query.find()`     | **Iterates** through entities matched by the query dondition met | Many entities |
+| `query.find()`     | **Iterates** through entities matched by the query until the first one satisfying a particular condition | Many entities |
 
 ### `has`
 
-**"Does this entity have `Position`?"**
+*"Does this entity have `Position`?"*
 
 ```cpp
 entity.has<Position>()
 ```
 
-**"Does this entity have `Position` AND `Velocity`?"**
+*"Does this entity have `Position` AND `Velocity`?"*
 For multiple components:
 
 ```cpp
@@ -943,7 +936,7 @@ entity.has<Position, Velocity>()
 
 ### `query`
 
-**"Which entities have `Position` AND `Velocity`?"**
+*"Which entities have `Position` AND `Velocity`?"*
 
 ```cpp
 auto query = world.query<Position, Velocity>();
@@ -951,7 +944,7 @@ auto query = world.query<Position, Velocity>();
 
 ### `query.each`
 
-**"Give me each matching entity and its components so I can process them."**
+*"Give me each matching entity and its components so I can process them."*
 
 ```cpp
 query.each([](flecs::entity entity, Position& position, Velocity& velocity)
@@ -973,7 +966,7 @@ query.each([](flecs::entity entity, ComponentA& a, ComponentB& b)
 
 ### `query.find`
 
-**"Search the matching entities and return the first one that satisfies my condition."**
+*"Search the matching entities and return the first one that satisfies my condition."*
 
 ```cpp
 auto entity = query.find([](Position& position, SelectionBounds& bounds)
@@ -1024,23 +1017,6 @@ if (entity)
     entity.add<TagSelected>();
 ```
 
-That's essentially Flecs's equivalent of your EnTT:
+The important concept is that **`find`** is a **search**, not a general iteration mechanism. The callback's return value determines whether the current entity is the one you're looking for.
 
-```cpp
-for (auto [entity, position, bounds] : view.each())
-{
-    if (CheckCollisionPointCircle(mousePos, position.position, bounds.radius))
-    {
-        registry.emplace<TagSelected>(entity);
-        break;
-    }
-}
-```
-
-The important concept is that **`find` is a search, not a general iteration mechanism**. The callback's return value determines whether the current entity is the one you're looking for.
-
-
-That's one of the fundamental patterns you'll use repeatedly with Flecs.
-
-One small terminology change is intentional: Flecs uses **`world`** rather than EnTT's **`registry`**, and **`query`** rather than EnTT's **`view`** as the main query abstraction.
 
