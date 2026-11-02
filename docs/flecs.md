@@ -798,13 +798,14 @@ auto des2 = world.entity("Destroyer_2")
     .is_a(destroyer)
     .set(Speed{60.0f});
 
-
 std::cout << "Instance type: " << des1.type().str() << "\n";
 std::cout << "Destroyer_1: fuel " << des1.get<Fuel>().value << "\n";
-std::cout << "Destroyer_2: fuel " <<  des2.get<Fuel>().value << "\n";
+std::cout << "Destroyer_2: fuel " << des2.get<Fuel>().value << "\n";
+
 surface_ship.set(Fuel{8000.0f});
+
 std::cout << "\n" << "After setting prefab fuel to 8000:" << "\n";
-world.each([](flecs::entity e, Fuel& f, Speed& s) {
+world.each([](flecs::entity e, const Fuel& f, const Speed& s) {
     std::cout << e.name()
     << ": fuel " << f.value
     << ", speed " << s.value << "\n";
@@ -922,7 +923,7 @@ int main() {
 
 | API                   | Purpose               |
 | --------------------- | --------------------- |
-| `flecs::world`        | World: ECS container         |
+| `flecs::world world`  | World: Create ECS container         |
 | `world.reset()`       | World: Reset ECS container         |
 | `world.entity()`      | Entity: Create entity         |
 | `entity.destruct()`   | Entity: Destroy entity        |
@@ -940,7 +941,7 @@ int main() {
 | `query.each()`        | Query: Iterate query results (all) |
 | `query.find()`        | Query: Iterate query results (not all) |
 | `world.system<T>()`   | System: Create system         |
-| `world.prefab()`      | Prebab: Create prefab         |
+| `world.prefab()`      | Prefab: Create prefab         |
 
 ### Clarification
 

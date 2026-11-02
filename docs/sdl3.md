@@ -93,11 +93,9 @@ The object moves approximately 1.6 pixels per frame.
 <strong>REMEMBER</strong>
 Delta time is measured in seconds, not milliseconds.
 
-## 3. VSync, Frame Limiting and Game Loops
+## 3. Set FPS
 
-### VSync – Vertical Synchronization
-
-VSync synchronizes frame presentation with the monitor's refresh cycle. So 60 Hz refresh rate correspond to 60 FPS.
+**VSync** synchronizes frame presentation with the monitor's refresh cycle. So 60 Hz refresh rate correspond to 60 FPS.
 
 Enable VSync in SDL3:
 
@@ -115,7 +113,7 @@ SDL_SetRenderVSync(renderer, 0);
 
 VSync helps prevent screen tearing. Actual FPS depends on rendering performance and the synchronization mode.
 
-### Calculating Delta Time in SDL3
+## 4. Calculate Delta Time
 
 There are two ways to calculate delta time in SDL3:
 
@@ -138,7 +136,7 @@ In simple terms:
 
 Both can be used to calculate delta time. `SDL_GetTicks()` is simpler, while `SDL_GetPerformanceCounter()` provides greater timing precision.
 
-#### A. Milisecond-resolution timing
+### A. Milisecond-resolution timing
 
 ```cpp
 // Initialize timer
@@ -153,7 +151,7 @@ Uint64 previousTicks = SDL_GetTicks();
 ```
 
 
-#### B. High-resolution timing
+### B. High-resolution timing
 
 ```cpp
 // Initialize timer
@@ -187,7 +185,7 @@ This limits the simulation step to 50 milliseconds.
 
 Keep raw delta time separate if you need accurate FPS reporting.
 
-### FPS calculation
+## 5. FPS calculation
 
 Count frames over an elapsed period:
 
@@ -214,7 +212,7 @@ if (fpsElapsed >= 1.0f) {
 - Variable timestep: Updates the simulation using actual elapsed time. Simpler and suitable for many games.
 - Fixed timestep: Updates the simulation using a constant time interval, such as `1.0 / 60.0`. Useful for more predictable physics.
 
-## 4. Practical Examples
+## 6. Practical Examples
 
 ### A. Quick experiments and practice
 
@@ -373,7 +371,7 @@ Limitations:
 - `SDL_Delay()` is not an exact timer.
 - Requires additional timing code.
 
-## 5. Quick Reference
+## 7. Quick Reference
 
 | Function / concept | Purpose |
 | --- | --- |
@@ -387,7 +385,7 @@ Limitations:
 | Fixed timestep | Advances simulation in constant increments |
 | Variable timestep | Advances simulation using actual elapsed time |
 
-## 6. Recommended Practices
+## 8. Recommended Practices
 
 For everyday SDL3 development:
 
@@ -400,9 +398,9 @@ For everyday SDL3 development:
 7. Consider fixed timestep when implementing more advanced physics.
 8. Avoid combining VSync and a manual frame limiter unless you have a specific reason.
 
-## 7. Final Cheat Sheet
+## 9. Cheat Sheet
 
-## Quick testing
+### Quick testing
 
 ```cpp
 SDL_SetRenderVSync(renderer, 1);
@@ -421,7 +419,7 @@ SDL_Delay(16);
 
 Simple approximate 60 FPS loop.
 
-## Normal game development
+### Normal game development
 
 
 ```cpp
@@ -431,7 +429,7 @@ float dt = calculateDeltaTime();
 
 VSync + measured delta time.
 
-## Manual 60 FPS limiting
+### Manual 60 FPS limiting
 
 
 ```cpp
@@ -441,7 +439,7 @@ constexpr double dt = 1.0 / 60.0;
 
 Disable VSync and implement your own frame limiter.
 
-## Fixed timestep simulation
+### Fixed timestep simulation
 
 
 ```cpp
@@ -450,8 +448,11 @@ constexpr double FIXED_DT = 1.0 / 60.0;
 
 Useful for predictable physics updates.
 
+* * *
+
 The most important thing to remember:
 
-FPS controls how frequently frames are produced. VSync controls when frames are presented. Delta time controls how much your simulation advances.
+- FPS controls how frequently frames are produced.
+- VSync controls when frames are presented.
+- Delta time controls how much your simulation advances.
 
-These are three different concepts, and understanding how they work together is fundamental to building games with SDL3.
