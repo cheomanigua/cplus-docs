@@ -778,40 +778,74 @@ world.component<Fuel>()
     .add(flecs::OnInstantiate, flecs::Inherit);
 ```
 
-This configuration must be applied before creating the prefab instances.
-
-With this policy:
+This configuration must be applied before creating the prefab instances. Full example:
 
 
 ```cpp
-auto surfaceShip = world.prefab("SurfaceShip")
-    .set<Fuel>({5000.0});
+world.component<Fuel>()
+    .add(flecs::OnInstantiate, flecs::Inherit);
 
-auto destroyer = world.entity("Destroyer1")
-    .is_a(surfaceShip);
+auto surface_ship = world.prefab("SurfaceShip")
+.set<Fuel>({5000.0f});
 
-std::cout << destroyer.get<Fuel>().value << "\n";
-surfaceShip.set(Fuel{8000.0});
-std::cout << destroyer.get<Fuel>().value << "\n";
+auto destroyer = world.prefab("Destroyer")
+    .is_a(surface_ship)
+    .set(Speed{50.0f});
+
+auto des1 = world.entity("Destroyer_1")
+    .is_a(destroyer);
+auto des2 = world.entity("Destroyer_2")
+    .is_a(destroyer)
+    .set(Speed{60.0f});
+
+
+std::cout << "Instance type: " << des1.type().str() << "\n";
+std::cout << "Destroyer_1: fuel " << des1.get<Fuel>().value << "\n";
+std::cout << "Destroyer_2: fuel " <<  des2.get<Fuel>().value << "\n";
+surface_ship.set(Fuel{8000.0f});
+std::cout << "\n" << "After setting prefab fuel to 8000:" << "\n";
+world.each([](flecs::entity e, Fuel& f, Speed& s) {
+    std::cout << e.name()
+    << ": fuel " << f.value
+    << ", speed " << s.value << "\n";
+})
 ```
 
 Expected output:
 
 ```text
-5000
-8000
+Instance type: Speed, (Identifier,Name), (IsA,Destroyer)
+Destroyer_1: fuel 5000
+Destroyer_2: fuel 5000
+
+After setting prefab fuel to 8000:
+Destroyer_1: fuel 8000, speed 50
+Destroyer_2: fuel 8000, speed 60
 ```
 
 In this case:
 
-- The destroyer does not own its own `Fuel` component.
-- `destroyer.get<Fuel>()` retrieves the component from the prefab through inheritance.
-- Changing the prefab's `Fuel` value is reflected when accessing the inherited component through the destroyer.
-
-**Important:** This changes the default instantiation behavior for `Fuel`. Use it when you explicitly want instances to inherit `Fuel` rather than own independent copies.
+- The destroyers do not own their own `Fuel` component.
+- `destroyers.get<Fuel>()` retrieve the component from the prefab through inheritance.
+- Changing the prefab's `Fuel` value is reflected when accessing the inherited component through the destroyers.
 
 If you later want a particular instance to own its own copy despite this inheritance policy, you can use `set_auto_override()` on the prefab.
 
+If we disable the `Fuel` component inheritance by removing `world.component<Fuel>()` line from the previous example, the output will be:
+
+```text
+Instance type: Fuel, Speed, (Identifier,Name), (IsA,Destroyer)
+Destroyer_1: fuel 5000
+Destroyer_2: fuel 5000
+
+After setting prefab fuel to 8000:
+Destroyer_1: fuel 5000, speed 50
+Destroyer_2: fuel 5000, speed 60
+```
+
+- The destroyers own their own `Fuel` component. You can see the `Fuel` component in the first line of the output.
+- `destroyers.get<Fuel>()` retrieve the component from the instance through inheritance.
+- Changing the prefab's `Fuel` value is not reflected when accessing the inherited component through the destroyers.
 
 ## Example
 
