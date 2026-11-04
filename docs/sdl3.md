@@ -2,11 +2,24 @@
 
 Practical programming documentation · C++ / SDL3
 
+# Installation
+
+### Debian
+
+```text
+sudo apt install libsdl3-dev libsdl3-image-dev libsdl3-ttf-dev
+```
+
+### OpenSuse
+
+```text
+sudo zypper install SDL3-devel SDL3_image-devel SDL3_ttf-devel
+```
+
 # Includes
 
 ```cpp
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_main.h>
 #include <SDL3_ttf/SDL_ttf.h>
 #include <SDL3_image/SDL_image.h>
 ```
@@ -54,7 +67,8 @@ Understanding these concepts helps you build applications that behave consistent
 
 ## 2. FPS and Delta Time
 
-FPS measures how many frames your application produces per second. Delta time (`dt`) represents the elapsed time between two consecutive frames, expressed in seconds.
+- FPS measures how many frames your application produces per second.
+- Delta time (`dt`) represents the elapsed time between two consecutive frames, expressed in seconds.
 
 | FPS | Time per frame (dt) |
 | --- | --- |
@@ -110,6 +124,14 @@ Disable VSync:
 ```cpp
 SDL_SetRenderVSync(renderer, 0);
 ```
+
+[!WARNING]
+<strong>IMPORTANT</strong>
+<code>SDL_SetRenderVSync(renderer, 1);</code> must be added after <code>SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);</code> like this:
+<pre>
+SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+SDL_SetRenderVSync(renderer, 1);
+</pre>
 
 VSync helps prevent screen tearing. Actual FPS depends on rendering performance and the synchronization mode.
 

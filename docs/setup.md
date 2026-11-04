@@ -55,13 +55,19 @@ clean:
 	rm -f $(TARGET)
 ```
 
+run:
+
+```text
+make
+```
+
 # CMakeLists.txt
 
 ```Makefile
 cmake_minimum_required(VERSION 3.10)
 
 # Project name
-project(DataDrivenEngine VERSION 1.0)
+project(MyProject VERSION 1.0)
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 20)
@@ -99,6 +105,15 @@ target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 #  if(UNIX AND NOT APPLE)
 #      target_link_libraries(${PROJECT_NAME} PRIVATE m pthread dl rt X11)
 #  endif()
+```
+
+run:
+
+```text
+rm -rf build
+cmake -S . -B build
+cmake --build build
+./build/MyProject
 ```
 
 # gdb debugger
