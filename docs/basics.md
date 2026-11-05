@@ -1,5 +1,18 @@
 # Basics
 
+# Suggested Style Guide
+
+| Element             | Convention       | Example                     |
+| ------------------- | ---------------- | --------------------------- |
+| Classes and structs | PascalCase       | `SimulationClock`           |
+| Functions           | camelCase        | `advance()`                 |
+| Variables           | camelCase        | `simulationTime`            |
+| Private members     | camelCase + `_`  | `simulationTime_`           |
+| Constants           | kPascalCase      | `kDefaultTimeScale`         |
+| Enumerators         | PascalCase       | `SimulationPhase::Movement` |
+| Macros              | UPPER_SNAKE_CASE | `NAVALSIM_VERSION_MAJOR`    |
+| Filenames           | snake_case       | `simulation_clock.hpp`      |
+
 # Uniform Initialization
 
 ## Initialization
