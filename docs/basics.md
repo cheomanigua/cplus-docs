@@ -8,6 +8,7 @@
 | Functions           | camelCase        | `advance()`                 |
 | Variables           | camelCase        | `simulationTime`            |
 | Private members     | camelCase + `_`  | `simulationTime_`           |
+| Private members     | `m_` + camelCase | `m_simulationTime`          |
 | Constants           | kPascalCase      | `kDefaultTimeScale`         |
 | Enumerators         | PascalCase       | `SimulationPhase::Movement` |
 | Macros              | UPPER_SNAKE_CASE | `NAVALSIM_VERSION_MAJOR`    |
@@ -414,3 +415,57 @@ The 8-bit fixed-width integer types are often treated like chars instead of inte
 
 **Recommendation:** If your code assumes the value is 32 bits, use `std::uint32_t`. It makes the requirement explicit and guarantees the width across platforms that provide the type.
 
+# Raw Pointers vs Smart Pointers
+
+The main difference is manual memory management vs. automatic memory management using RAII (`std::unique_ptr`).
+
+## 1. Raw pointer
+
+```cpp
+TextureCache* textureCache {nullptr};
+
+delete textureCache;
+textureCache = new TextureCache(renderer);
+```
+
+This uses a raw pointer to manage dynamically allocated memory.
+
+- `textureCache {nullptr}` initializes the pointer to `nullptr`.
+- `delete textureCache` manually releases the previously allocated object.
+- `new TextureCache(renderer)` allocates a new object on the heap.
+- You are responsible for ensuring that the object is deleted when no longer needed.
+
+Potential problems:
+
+- Forgetting `delete` can cause memory leaks.
+- Deleting the same pointer twice can cause undefined behavior.
+- If an exception occurs between deleting and allocating, the pointer remains `nullptr`.
+- Ownership is not explicit: other parts of the code might accidentally delete the same object.
+
+## 2. Smart pointer (`std::unique_ptr`)
+
+```cpp
+std::unique_ptr<TextureCache> textureCache;
+
+textureCache.reset(); // Optional
+textureCache = std::make_unique<TextureCache>(renderer);
+```
+
+This uses a smart pointer to manage dynamically allocated memory automatically.
+
+- `std::unique_ptr<TextureCache>` owns the `TextureCache` object.
+- `textureCache.reset()` destroys the previously owned object and sets the pointer to `nullptr`. Optional.
+- `std::make_unique<TextureCache>(renderer)` creates a new object and returns a `std::unique_ptr`.
+- Ownership is automatically transferred to `textureCache`.
+
+Advantages:
+
+- Automatic memory management.
+- Prevents memory leaks when ownership is handled correctly.
+- Prevents accidental copying of ownership.
+- Safer and easier to maintain.
+- Automatically destroys the object when the `unique_ptr` goes out of scope.
+
+### Optional `reset()`
+
+You don't actually need to call `reset()` before assigning a new object. When assigning the new `unique_ptr`, the old object is automatically destroyed before the new one is stored.
