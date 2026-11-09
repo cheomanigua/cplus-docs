@@ -239,8 +239,8 @@ Here is the equivalent C++ implementation:
 ```cpp
 
 #include <algorithm>
+#include <iostream>
 #include <string>
-#include <utility>
 
 class Person
 {
@@ -298,12 +298,15 @@ private:
 Usage:
 
 ```text
-Person player("John", 20, 15, 10, 30);
+int main() {
+    Person p("John", 20, 15, 10, 30);
 
-player.setStrength(40);
+    std::cout << p.health() << '\n';
+    std::cout << p.mana() << '\n';
 
-std::cout << player.health() << '\n';
-std::cout << player.mana() << '\n';
+    p.setStrength(40);
+    std::cout << p.health() << '\n';
+}
 ```
 
 ## 2. Class instantiation
@@ -458,8 +461,6 @@ private:
 - Rule of Zero: Avoid implementing special member functions when the compiler-generated versions are sufficient.
 
 ### Usage
-
-cpp
 
 ```cpp
 Latitude madrid(40.4168);
