@@ -26,8 +26,8 @@ public:
 private:
     std::string firstName_;
 public:
-    void setFirstName(const std::string& name) { firstName_ = name; }
-    std::string getFirstName() const { return firstName_; }
+    void setFirstName(const std::string& name) { firstName_ = name; } // setter
+    const std::string& firstName() const { return firstName_; } // getter
 
 ```
 
@@ -69,12 +69,10 @@ public:
 
 ```
 
-
-
 ### Naming conventions
 
-* Use PascalCase for class names.
-* Use camelCase for method names, property methods, local variables, and parameters.
+* Use `PascalCase` for class names.
+* Use `camelCase` for method names, property methods, local variables, and parameters.
 * Use `_` suffix, `m_` prefix or camelCase for private fields.
 
 ```cpp
@@ -82,24 +80,26 @@ class Person {
 private:
     int count_;
     int age_;
+    std::string firstName_;
+    std::string lastName_;
+
 public:
-    // Getter/Setter for age_
-    void setAge(int age) { age_ = age; }
-    int getAge() const { return age_; }
-
-    // Getter for count_
-    int getCount() const { return count_; }
-
+    // Constructor
     Person(std::string lastName, std::string firstName, int age)
         : lastName_(lastName), firstName_(firstName), age_(age) {}
 
+    // Getters
+    int age() const { return age_; }
+    int count() const { return count_; }
+
+    // Setters
+    void setAge(int age) { age_ = age; }
+
+    // Methods
     void increment() {
         int step = 1; // local variable
         count_ += step;
     }
-private:
-    std::string firstName_;
-    std::string lastName_;
 };
 
 ```
@@ -118,8 +118,8 @@ private:
     int m_purchaseYear;
 public:
     // Getter/Setter
-    int getPurchaseYear() const { return m_purchaseYear; }
-    void setPurchaseYear(int year) { m_purchaseYear = year; }
+    int purchaseYear() const { return m_purchaseYear; } // getter
+    void setPurchaseYear(int year) { m_purchaseYear = year; } // setter
 };
 
 ```
@@ -148,8 +148,8 @@ private: int addition() {}
 
 2. **Return values**:
 ```cpp
-public: std::string hello() { return "Hello world"; }
-public: void hola() { std::cout << "Hello world"; }
+public: std::string hello() const { return "Hello world"; }
+public: void hola() const { std::cout << "Hello world"; }
 
 ```
 
@@ -225,14 +225,14 @@ private:
     }
 public:
     void setStrength(int val) { m_strength = val; updateHealth(); }
-    int getHealth() const { return m_health; }
+    int health() const { return m_health; }
 };
 
 ```
 
 The above code works only during instantiation. However, if during the game Strength or Endurance changes value, it won't be reflected to Health. Likewise, if Intelligence changes value, it won't be reflected to Mana. If we want Health and Mana to update when Strength, Endurance or Intelligence changes, use the code below instead.
 
-In C++, because there is no direct equivalent to C# properties with integrated `get` and `set` logic, the standard approach is to use private member variables with public getter and setter methods. To enforce the logic (updating `Health` or `Mana` when attributes change), you call the update methods within the setters.
+In C++, because there is no direct equivalent to C# properties with integrated `get` and `set` logic, the standard approach is to use private member variables with public getter and setter methods. To enforce the logic (updating `health` or `mana` when attributes change), you call the update methods within the setters.
 
 Here is the equivalent C++ implementation:
 
@@ -241,6 +241,7 @@ Here is the equivalent C++ implementation:
 #include <algorithm>
 #include <iostream>
 #include <string>
+#include <utility>
 
 class Person
 {
@@ -365,13 +366,13 @@ class IVehicle {
 public:
     virtual ~IVehicle() = default;
     virtual void start() = 0;
-    virtual int getSpeed() const = 0;
+    virtual int Speed() const = 0;
 };
 
 class Car : public IVehicle {
 public:
     void start() override { /* implementation */ }
-    int getSpeed() const override { return 0; }
+    int Speed() const override { return 0; }
 };
 
 ```
