@@ -469,3 +469,52 @@ Advantages:
 ### Optional `reset()`
 
 You don't actually need to call `reset()` before assigning a new object. When assigning the new `unique_ptr`, the old object is automatically destroyed before the new one is stored.
+
+### Example
+
+```cpp
+#include <iostream>
+#include <memory>
+
+class Car {
+public:
+    Car() {
+        std::cout << "Car created\n";
+    }
+
+    ~Car() {
+        std::cout << "Car destroyed\n";
+    }
+
+    void drive() {
+        std::cout << "Car is driving!\n";
+    }
+};
+
+int main() {
+
+    // =====================================
+    // OLD C++: Raw pointer (manual memory management)
+    // =====================================
+
+    Car* oldPtr = new Car();
+
+    oldPtr->drive();
+
+    delete oldPtr; // Must manually delete!
+
+
+    // =====================================
+    // MODERN C++: unique_ptr (automatic memory management)
+    // =====================================
+
+    std::unique_ptr<Car> newPtr = std::make_unique<Car>();
+
+    newPtr->drive();
+
+    // No delete needed!
+    // Car is automatically destroyed when newPtr goes out of scope.
+
+    return 0;
+}
+```
