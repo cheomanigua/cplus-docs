@@ -23,13 +23,16 @@ In C++, **arrays** and **vectors** are both used to store collections of items, 
 // C-style array (fixed size)
 int numbers[3] = {1, 2, 3};
 
-// std::array (modern C++)
-std::array<int, 3> modernNumbers = {1, 2, 3};
+// std::array (C++11)
+std::array<int, 3> numbersC11 = {1, 2, 3};
+
+// std::array (C++17)
+std::array numbersC17 {1, 2, 3};
 
 // Accessing elements
 numbers[0] = 10;
-modernNumbers.at(0) = 10; // .at() provides bounds checking
-
+numbersC11.at(0) = 10; // .at() provides bounds checking
+numbersC17.at(0) = 10; // .at() provides bounds checking
 ```
 
 ---

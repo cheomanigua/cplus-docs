@@ -14,9 +14,24 @@
 | Macros              | UPPER_SNAKE_CASE | `NAVALSIM_VERSION_MAJOR`    |
 | Filenames           | snake_case       | `simulation_clock.hpp`      |
 
-# Uniform Initialization
 
-## Initialization
+# Initialization
+
+```cpp
+int a;         // default-initialization (no initializer)
+
+// Traditional initialization forms:
+int b = 5;     // copy-initialization (initial value after equals sign)
+int c ( 6 );   // direct-initialization (initial value in parenthesis)
+
+// Modern initialization forms (preferred):
+int d { 7 };   // list-initialization (initial value in braces)
+int e {};      // value-initialization (empty braces)
+```
+
+## Uniform Initialization
+
+Also known as **List-initialization** or **brace initialization**.
 
 Uniform initialization is a C++11 feature that uses **curly braces `{}`** to initialize almost every kind of object. The goal was to provide **one consistent syntax** instead of several different initialization styles.
 
@@ -470,7 +485,7 @@ Advantages:
 
 You don't actually need to call `reset()` before assigning a new object. When assigning the new `unique_ptr`, the old object is automatically destroyed before the new one is stored.
 
-### Example
+## Example
 
 ```cpp
 #include <iostream>
