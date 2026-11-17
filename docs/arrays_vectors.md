@@ -70,7 +70,10 @@ numbersC17.at(0) = 10; // .at() provides bounds checking
 #include <algorithm> // Required for std::ranges:::sort
 
 int main() {
-    std::vector<int> numbers = {10, 20, 30};
+    // Create vector
+    std::vector numbers {10, 20, 30};           // Option 1 - CTAD + direct list initialization
+    std::vector<int> numbers {10, 20, 30};      // Option 2 - Direct list initialization
+    std::vector<int> numbers = {10, 20, 30};    // Option 3 - Copy list initialization
 
     // Add element at the end O(1)
     numbers.push_back(40);
@@ -84,38 +87,26 @@ int main() {
     // Remove element from the beginning O(n)
     numbers.erase(numbers.begin());
 
-    // Remove all values 20
+    // Remove all elements holding the value 20
     std::erase(numbers, 20);
 
     // Remove the element in index 1
     numbers.erase(numbers.begin() + 1);
 
     // Access elements
-    std::cout << "First: " << numbers[0] << std::endl;
+    numbers[0] = 40;                                    // C style
+    numbers.at(0) = 40;                                 // Modern C++ style
+    std::cout << "First: " << numbers[0] << "\n";       // C style
+    std::cout << "First: " << numbers.at(0) << "\n";    // Modern C++ style
+
+    // Sort the vector
+    std::ranges::sort(numbers);
 
     // Iterate
     for (int num : numbers) {
         std::cout << num << " ";
     }
-
-    // Sort the vector
-    std::ranges::sort(numbers);
-
-    // Strings
-    // Declare and initialize the vector
-    std::vector<std::string> sumer = {"Ur", "Uruk", "Adab", "Kish", "Lagash", "Larsa", "Umma"};
-
-    // Sort the vector
-    std::ranges::sort(sumer);
-
-    // Iterate and print
-    for (const std::string& city : sumer) {
-        std::cout << city << std::endl;
-    }
-    
-    return 0;
 }
-
 ```
 
 ---
