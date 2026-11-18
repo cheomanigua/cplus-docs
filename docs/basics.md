@@ -18,22 +18,22 @@
 # Initialization
 
 ```cpp
-int a;         // default-initialization (no initializer)
+int a;         // default initialization (no initializer)
 
 // Traditional initialization forms:
-int b = 5;     // copy-initialization (initial value after equals sign)
-int c ( 6 );   // direct-initialization (initial value in parenthesis)
+int b = 5;     // copy initialization (initial value after equals sign)
+int c ( 6 );   // direct initialization (initial value in parenthesis)
 
 // Modern initialization forms (preferred):
-int d { 7 };   // list-initialization (initial value in braces)
-int e {};      // value-initialization (empty braces)
+int d { 7 };   // direct-list initialization (initial value in braces)
+int e {};      // value initialization (empty braces)
 ```
 
-## Uniform Initialization
+## Direct-list Initialization
 
-Also known as **List-initialization** or **brace initialization**.
+Also known as **brace initialization** or **uniform initialization** .
 
-Uniform initialization is a C++11 feature that uses **curly braces `{}`** to initialize almost every kind of object. The goal was to provide **one consistent syntax** instead of several different initialization styles.
+Direct-list initialization is a C++11 feature that uses **curly braces `{}`** to initialize almost every kind of object. The goal was to provide **one consistent syntax** instead of several different initialization styles.
 
 Instead of remembering when to use `=`, `()`, or `{}`, modern C++ encourages using `{}` by default:
 
@@ -528,7 +528,19 @@ int main() {
     newPtr->drive();
 
     // No delete needed!
-    // Car is automatically destroyed when newPtr goes out of scope.
+    // Car is automatically destroyed when newPtr (smart pointer) goes out of scope.
+
+
+    // =====================================
+    // NO POINTER: Stack allocation
+    // =====================================
+
+    Car noPtr;
+
+    noPtr.drive();
+
+    // No delete needed!
+    // Car is automatically destroyed when noPtr (object) goes out of scope.
 
     return 0;
 }
